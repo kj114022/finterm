@@ -1,0 +1,70 @@
+[package]
+name = "finterm"
+version = "0.1.0"
+edition = "2021"
+authors = ["FinTerm Contributors"]
+description = "A production-ready terminal-based financial news aggregator"
+license = "MIT"
+repository = "https://github.com/yourusername/finterm"
+keywords = ["finance", "news", "terminal", "tui", "hacker-news"]
+categories = ["command-line-utilities", "finance"]
+
+[[bin]]
+name = "finterm"
+path = "src/main.rs"
+
+[dependencies]
+# TUI Framework
+ratatui = "0.26"
+crossterm = "0.27"
+
+# Async Runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# HTTP Client
+reqwest = { version = "0.11", features = ["rustls-tls", "json"], default-features = false }
+
+# CLI Framework
+clap = { version = "4.4", features = ["derive", "env"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Caching
+sled = "0.34"
+
+# HTML Parsing
+scraper = "0.18"
+html2text = "0.12"
+
+# Error Handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+unicode-width = "0.1"
+textwrap = "0.16"
+sha2 = "0.10"
+hex = "0.4"
+dirs = "5.0"
+shellexpand = "3.1"
+async-trait = "0.1.89"
+futures = "0.3.31"
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockito = "1.2"
+tempfile = "3.23.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

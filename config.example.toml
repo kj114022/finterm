@@ -1,0 +1,29 @@
+[finnhub]
+api_key = ""  # Required: Your Finnhub API key from https://finnhub.io/
+base_url = "https://finnhub.io/api/v1"
+refresh_interval = 300  # seconds
+max_articles = 50
+category = "general"  # Options: general, forex, crypto, merger
+
+[hackernews]
+max_stories = 50
+categories = ["top", "new", "show", "ask"]
+include_dead = false
+fetch_full_content = true  # Fetch and parse linked articles
+
+[ui]
+theme = "dark"  # Options: dark, light
+vim_mode = true  # Enable vim-style navigation
+show_help = true
+default_view = "dashboard"  # Options: dashboard, finance, hn
+
+[cache]
+enabled = true
+ttl = 3600  # Cache TTL in seconds
+max_size_mb = 100
+# path = "~/.cache/finterm/"  # Optional custom cache path
+
+[keybindings]
+quit = "q"
+search = "/"
+help = "?"

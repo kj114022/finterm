@@ -1,0 +1,36 @@
+# Build artifacts
+/target/
+debug/
+*.pdb
+
+# Cargo
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Local configuration (may contain API keys)
+config.toml
+.env
+.env.local
+
+# Cache
+.cache/
+
+# Testing artifacts
+*.profraw
+coverage/
+
+# OS files
+Thumbs.db
+.DS_Store
+._*
