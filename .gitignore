@@ -35,4 +35,7 @@ Thumbs.db
 .DS_Store
 ._*
 homebrew-finterm/
-homebrew-finterm/
+
+# Project files
+IDEA.md
+*.tar.gz
