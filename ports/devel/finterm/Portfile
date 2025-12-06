@@ -1,0 +1,38 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
+
+PortSystem          1.0
+PortGroup           cargo 1.0
+PortGroup           github 1.0
+
+github.setup        kj114022 finterm 1.0.0 v
+revision            0
+categories          devel news
+license             MIT
+maintainers         {kj114022 @kj114022}
+description         Fast terminal news aggregator for Hacker News and financial markets
+long_description    FinTerm is a fast, futuristic terminal news aggregator \
+                    featuring Hacker News integration (Top, New, Best, Ask, Show, Jobs), \
+                    real-time financial news from Finnhub, parallel loading with \
+                    10 concurrent requests, infinite scroll support, beautiful \
+                    terminal UI, and Vim-style navigation.
+
+homepage            https://github.com/kj114022/finterm
+
+checksums           rmd160  SKIP \
+                    sha256  SKIP \
+                    size    SKIP
+
+destroot {
+    xinstall -m 0755 ${worksrcpath}/target/[cargo.rust_platform]/release/finterm \
+        ${destroot}${prefix}/bin/
+}
+
+notes "
+To get started with FinTerm:
+    finterm
+
+For Finnhub financial news, get a free API key at:
+    https://finnhub.io/register
+
+Configure at ~/.config/finterm/config.toml
+"
