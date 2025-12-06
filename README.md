@@ -93,4 +93,9 @@ Get a Finnhub API key at [finnhub.io](https://finnhub.io/register).
 
 ## License
 
-MIT
+AGPL-3.0 with Commons Clause
+
+- Free to use, modify, and distribute for non-commercial purposes
+- Must share source code of derivative works
+- Commercial use requires written permission
+- See [LICENSE](LICENSE) for details
