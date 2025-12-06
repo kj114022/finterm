@@ -218,6 +218,49 @@ impl FeedProvider for CratesIoProvider {
         
         Ok(items)
     }
+    
+    fn supports_offset(&self) -> bool {
+        true  // Crates.io supports pagination
+    }
+    
+    async fn fetch_items_with_offset(&self, offset: usize, limit: usize) -> Result<Vec<FeedItem>> {
+        let sort = match self.category {
+            CratesCategory::New => "new",
+            CratesCategory::JustUpdated => "recent-updates",
+            CratesCategory::MostDownloaded => "downloads",
+            CratesCategory::RecentlyDownloaded => "recent-downloads",
+        };
+        
+        // Calculate page from offset (crates.io uses 1-based pages)
+        let per_page = limit.min(100);
+        let page = (offset / per_page) + 1;
+        
+        let url = format!(
+            "{}/crates?sort={}&per_page={}&page={}",
+            CRATES_IO_API, sort, per_page, page
+        );
+        
+        #[derive(Deserialize)]
+        struct CratesResponse {
+            crates: Vec<CrateItem>,
+        }
+        
+        let response: CratesResponse = self.client
+            .get(&url)
+            .send()
+            .await?
+            .json()
+            .await
+            .map_err(|e| ProviderError::Parse(e.to_string()))?;
+        
+        let items: Vec<FeedItem> = response.crates
+            .into_iter()
+            .take(limit)
+            .map(|c| self.convert_to_feed_item(c))
+            .collect();
+        
+        Ok(items)
+    }
 }
 
 #[cfg(test)]

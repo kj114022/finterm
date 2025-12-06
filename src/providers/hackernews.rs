@@ -310,7 +310,77 @@ impl FeedProvider for HackerNewsProvider {
     }
     
     fn supports_search(&self) -> bool {
-        false  // HN API doesn't have search (would need Algolia)
+        true  // HN search via Algolia
+    }
+    
+    async fn search(&self, query: &str, limit: usize) -> Result<Vec<FeedItem>> {
+        let url = format!(
+            "https://hn.algolia.com/api/v1/search?query={}&tags=story&hitsPerPage={}",
+            query, limit
+        );
+        
+        #[derive(Deserialize)]
+        struct SearchResult {
+            hits: Vec<AlgoliaHit>,
+        }
+        
+        #[derive(Deserialize)]
+        struct AlgoliaHit {
+            #[serde(rename = "objectID")]
+            object_id: String,
+            title: Option<String>,
+            url: Option<String>,
+            author: Option<String>,
+            points: Option<i32>,
+            num_comments: Option<i32>,
+            created_at_i: Option<i64>,
+        }
+        
+        let response: SearchResult = self.client
+            .get(&url)
+            .send()
+            .await?
+            .json()
+            .await
+            .map_err(|e| ProviderError::Parse(e.to_string()))?;
+        
+        let items: Vec<FeedItem> = response.hits
+            .into_iter()
+            .filter_map(|hit| {
+                let title = hit.title?;
+                let published_at = hit.created_at_i
+                    .and_then(|ts| DateTime::from_timestamp(ts, 0))
+                    .unwrap_or_else(Utc::now);
+                
+                let metadata = FeedItemMetadata {
+                    score: hit.points,
+                    comments: hit.num_comments,
+                    tags: vec!["hackernews".to_string()],
+                    ..Default::default()
+                };
+                
+                let mut item = FeedItem::new(
+                    hit.object_id.clone(),
+                    self.id().to_string(),
+                    title,
+                    "Hacker News".to_string(),
+                    published_at,
+                )
+                .with_metadata(metadata);
+                
+                if let Some(url) = hit.url {
+                    item = item.with_url(url);
+                }
+                if let Some(author) = hit.author {
+                    item = item.with_author(author);
+                }
+                
+                Some(item)
+            })
+            .take(limit)
+            .collect();
+        
+        Ok(items)
     }
     
     fn supports_offset(&self) -> bool {

@@ -132,13 +132,3 @@ pub fn render_feed_item(f: &mut Frame, item: &FeedItem, scroll_offset: usize) {
     
     f.render_widget(help, chunks[3]);
 }
-
-// Keep old render function for backward compatibility (deprecated)
-#[deprecated(note = "Use render_feed_item instead")]
-#[allow(dead_code)]
-pub fn render(f: &mut Frame, _app: &()) {
-    // This function is deprecated
-    let msg = Paragraph::new("Article view deprecated - use render_feed_item")
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(msg, f.size());
-}
