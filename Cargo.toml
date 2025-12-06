@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["FinTerm Contributors"]
 description = "A production-ready terminal-based financial news aggregator"
 license = "MIT"
-repository = "https://github.com/yourusername/finterm"
+repository = "https://github.com/kj114022/finterm"
 keywords = ["finance", "news", "terminal", "tui", "hacker-news"]
 categories = ["command-line-utilities", "finance"]
 

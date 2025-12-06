@@ -30,7 +30,17 @@ pub struct CacheManager {
 impl CacheManager {
     /// Create a new cache manager
     pub fn new(cache_path: PathBuf, max_size_mb: u64) -> Result<Self> {
-        let db = sled::open(cache_path)?;
+        // Try to open database, if it fails due to lock or corruption, clear and retry
+        let db = match sled::open(&cache_path) {
+            Ok(db) => db,
+            Err(e) => {
+                tracing::warn!("Cache database error, clearing and retrying: {}", e);
+                // Remove corrupted/locked database
+                let _ = std::fs::remove_dir_all(&cache_path);
+                // Retry opening
+                sled::open(&cache_path)?
+            }
+        };
         
         Ok(Self {
             db,

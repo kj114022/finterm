@@ -4,23 +4,25 @@ PortSystem          1.0
 PortGroup           cargo 1.0
 PortGroup           github 1.0
 
-github.setup        kj114022 finterm 1.0.0 v
+github.setup        kj114022 finterm 0.1.0 v
 revision            0
 categories          devel news
-license             MIT
-maintainers         {kj114022 @kj114022}
+license             AGPL-3
+maintainers         {github.com:kj114022 @kj114022}
 description         Fast terminal news aggregator for Hacker News and financial markets
 long_description    FinTerm is a fast, futuristic terminal news aggregator \
                     featuring Hacker News integration (Top, New, Best, Ask, Show, Jobs), \
-                    real-time financial news from Finnhub, parallel loading with \
-                    10 concurrent requests, infinite scroll support, beautiful \
-                    terminal UI, and Vim-style navigation.
+                    real-time financial news from Finnhub, Crates.io Rust packages, \
+                    parallel loading with 10 concurrent requests, infinite scroll support, \
+                    beautiful terminal UI, and Vim-style navigation.
 
 homepage            https://github.com/kj114022/finterm
 
-checksums           rmd160  SKIP \
-                    sha256  SKIP \
-                    size    SKIP
+# Run: shasum -a 256 finterm-0.1.0.tar.gz to get the sha256
+# Run: shasum -a 160 finterm-0.1.0.tar.gz to get the rmd160  
+checksums           rmd160  PLACEHOLDER_RMD160 \
+                    sha256  PLACEHOLDER_SHA256 \
+                    size    PLACEHOLDER_SIZE
 
 destroot {
     xinstall -m 0755 ${worksrcpath}/target/[cargo.rust_platform]/release/finterm \
@@ -36,3 +38,4 @@ For Finnhub financial news, get a free API key at:
 
 Configure at ~/.config/finterm/config.toml
 "
+

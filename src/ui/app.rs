@@ -5,7 +5,7 @@
 use crate::cache::CacheManager;
 use crate::config::Config;
 use crate::models::FeedItem;
-use crate::providers::{FinnhubProvider, HackerNewsProvider, ProviderRegistry};
+use crate::providers::{FinnhubProvider, HackerNewsProvider, CratesIoProvider, ProviderRegistry};
 use crate::utils::Action;
 use crate::ui::views;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
@@ -86,6 +86,11 @@ impl App {
             Some(config.finnhub.category.clone()),
         ) {
             registry.register(finnhub);
+        }
+        
+        // Register Crates.io provider
+        if let Ok(cratesio) = CratesIoProvider::new(None) {
+            registry.register(cratesio);
         }
         
         // Create cache
