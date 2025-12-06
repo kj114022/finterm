@@ -1,7 +1,8 @@
 NEXT STEP
-ADD CRATES.IO 
-ADD A WEB CRAWLER AND SCRAPER FOR NEWS, BLOGS, FORUMS, UNIVERSITIES, COLLEGES, AND OTHERS IN TEXT DOMAIN 
+1. ADD CRATES.IO to no. 2
+2. ADD A WEB CRAWLER AND SCRAPER FOR NEWS, BLOGS, FORUMS, UNIVERSITIES, COLLEGES, AND OTHERS IN TEXT DOMAIN 
 
+Links: 
 https://github.com/theduke/crates-io-api
 https://crates.io/data-access
 https://crates.io/policies#crawlers

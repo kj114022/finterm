@@ -2,7 +2,7 @@ class Finterm < Formula
   desc "Fast terminal news aggregator for Hacker News and financial markets"
   homepage "https://github.com/kj114022/finterm"
   url "https://github.com/kj114022/finterm/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "PLACEHOLDER_SHA256"
+  sha256 "dd616dd238820116703eeb9c13aee3ac796aeccaccc1d37e1819dd9bc4603bbf"
   license "AGPL-3.0"
   head "https://github.com/kj114022/finterm.git", branch: "main"
 

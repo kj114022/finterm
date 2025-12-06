@@ -9,20 +9,7 @@
 
 > A fast, beautiful terminal news aggregator for developers and tech enthusiasts.
 
-Browse **Hacker News**, **Crates.io**, and **Financial Markets** — all from your terminal with vim-style navigation.
-
-## ✨ Features
-
-| Feature | Description |
-|---------|-------------|
-| 🟠 **Hacker News** | Top, New, Best, Ask HN, Show HN, Jobs |
-| 📦 **Crates.io** | New, Updated, Popular Rust packages |
-| 📈 **Financial News** | Real-time market news via Finnhub |
-| ⚡ **Fast** | Parallel requests (10 concurrent) |
-| 🎨 **Beautiful TUI** | Clean, modern terminal interface |
-| ⌨️ **Vim Navigation** | `j/k` to navigate, `Enter` to open |
-
-## 📦 Installation
+## Installation
 
 ### Homebrew (macOS/Linux)
 
@@ -56,7 +43,7 @@ Download pre-built binaries from [Releases](https://github.com/kj114022/finterm/
 | Linux | x86_64 |
 | Windows | x86_64 |
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 finterm
@@ -64,7 +51,7 @@ finterm
 
 Use number keys `1-3` to select a feed, or arrow keys to navigate.
 
-## ⌨️ Keybindings
+## Keybindings
 
 | Key | Action |
 |-----|--------|
@@ -77,7 +64,7 @@ Use number keys `1-3` to select a feed, or arrow keys to navigate.
 | `q` | Quit |
 | `?` | Help |
 
-## ⚙️ Configuration
+## Configuration
 
 Config file: `~/.config/finterm/config.toml`
 
@@ -94,20 +81,15 @@ enabled = true
 max_size_mb = 50
 ```
 
-> 💡 Get a free Finnhub API key at [finnhub.io/register](https://finnhub.io/register)
+> Get a free Finnhub API key at [finnhub.io/register](https://finnhub.io/register)
 
-## 🏗️ Built With
 
-- [Ratatui](https://github.com/ratatui-org/ratatui) - Terminal UI framework
-- [Tokio](https://tokio.rs) - Async runtime
-- [Reqwest](https://github.com/seanmonstar/reqwest) - HTTP client
-
-## 📄 License
+## License
 
 AGPL-3.0 — Free for personal and open-source use. See [LICENSE](LICENSE) for details.
 
 ---
 
 <p align="center">
-  Made with ❤️ for the terminal
+  Made with love for the terminal.
 </p>
