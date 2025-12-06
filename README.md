@@ -1,4 +1,4 @@
-# 📰 FinTerm
+# FinTerm
 
 **A fast, futuristic terminal news aggregator for Hacker News and financial markets.**
 
@@ -17,6 +17,18 @@
 
 ## 🚀 Installation
 
+### MacPorts (macOS)
+
+```bash
+# Install from MacPorts (after official submission)
+sudo port install finterm
+
+# Or use local portfile
+cd /path/to/finterm/ports
+sudo portindex
+sudo port install finterm
+```
+
 ### Homebrew (macOS/Linux)
 
 ```bash
@@ -32,7 +44,21 @@ cargo install finterm
 
 ### Binary Download
 
-Download the latest release from [GitHub Releases](https://github.com/kj114022/finterm/releases).
+Download pre-built binaries from [GitHub Releases](https://github.com/kj114022/finterm/releases):
+
+| Platform | Download |
+|----------|----------|
+| macOS (Apple Silicon) | `finterm-macos-aarch64.tar.gz` |
+| macOS (Intel) | `finterm-macos-x86_64.tar.gz` |
+| Linux (x86_64) | `finterm-linux-x86_64.tar.gz` |
+| Windows | `finterm-windows-x86_64.exe` |
+
+```bash
+# Example: Install on macOS
+curl -LO https://github.com/kj114022/finterm/releases/latest/download/finterm-macos-aarch64.tar.gz
+tar -xzf finterm-macos-aarch64.tar.gz
+sudo mv finterm /usr/local/bin/
+```
 
 ### From Source
 
@@ -40,7 +66,7 @@ Download the latest release from [GitHub Releases](https://github.com/kj114022/f
 git clone https://github.com/kj114022/finterm.git
 cd finterm
 cargo build --release
-./target/release/finterm
+sudo cp target/release/finterm /usr/local/bin/
 ```
 
 ## 📖 Usage
