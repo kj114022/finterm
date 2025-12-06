@@ -3,7 +3,7 @@
 A terminal-based news aggregator for Hacker News and financial markets.
 
 ![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![License](https://img.shields.io/badge/license-AGPL--3.0-green.svg)
 [![CI](https://github.com/kj114022/finterm/actions/workflows/ci.yml/badge.svg)](https://github.com/kj114022/finterm/actions)
 
 ## Features
