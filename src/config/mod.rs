@@ -19,6 +19,7 @@ pub type Result<T> = std::result::Result<T, ConfigError>;
 
 /// Main configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Config {
     #[serde(default)]
     pub finnhub: FinnhubConfig,
@@ -207,17 +208,6 @@ impl Default for KeybindingsConfig {
     }
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            finnhub: FinnhubConfig::default(),
-            hackernews: HackerNewsConfig::default(),
-            ui: UiConfig::default(),
-            cache: CacheConfig::default(),
-            keybindings: KeybindingsConfig::default(),
-        }
-    }
-}
 
 impl Config {
     /// Load configuration from file

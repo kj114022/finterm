@@ -177,7 +177,7 @@ impl HackerNewsProvider {
     
     /// Fetch items by IDs (parallel)
     async fn fetch_items_by_ids(&self, ids: &[u64]) -> Result<Vec<FeedItem>> {
-        let batch_size = 10;
+        let batch_size = 25;  // Increased from 10 for faster fetching
         let mut all_items = Vec::with_capacity(ids.len());
         
         for chunk in ids.chunks(batch_size) {
@@ -187,13 +187,11 @@ impl HackerNewsProvider {
             
             let results = join_all(futures).await;
             
-            for result in results {
-                if let Ok(item) = result {
-                    if item.deleted.unwrap_or(false) || item.dead.unwrap_or(false) {
-                        continue;
-                    }
-                    all_items.push(self.convert_to_feed_item(item));
+            for item in results.into_iter().flatten() {
+                if item.deleted.unwrap_or(false) || item.dead.unwrap_or(false) {
+                    continue;
                 }
+                all_items.push(self.convert_to_feed_item(item));
             }
         }
         

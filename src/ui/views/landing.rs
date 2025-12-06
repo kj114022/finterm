@@ -77,7 +77,7 @@ fn render_provider_list(f: &mut Frame, area: Rect, registry: &ProviderRegistry, 
             let line = Line::from(vec![
                 Span::styled(format!("{} ", prefix), Style::default().fg(Color::DarkGray)),
                 Span::styled(format!("{} ", summary.icon), style),
-                Span::styled(format!("{}", summary.name), style),
+                Span::styled(summary.name.to_string(), style),
                 Span::raw(" - "),
                 Span::styled(&summary.description, Style::default().fg(Color::DarkGray)),
                 Span::raw("  "),

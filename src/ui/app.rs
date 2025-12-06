@@ -250,20 +250,17 @@ impl App {
             Action::Quit => self.should_quit = true,
             Action::Back => {
                 // Go back to feed list
-                match &self.state {
-                    AppState::Article => {
-                        // Determine what state to return to
-                        let provider_id = self.current_item
-                            .as_ref()
-                            .map(|i| i.provider_id.clone());
-                        
-                        if let Some(id) = provider_id {
-                            self.state = AppState::Feed(id);
-                        } else {
-                            self.state = AppState::Dashboard;
-                        }
+                if self.state == AppState::Article {
+                    // Determine what state to return to
+                    let provider_id = self.current_item
+                        .as_ref()
+                        .map(|i| i.provider_id.clone());
+                    
+                    if let Some(id) = provider_id {
+                        self.state = AppState::Feed(id);
+                    } else {
+                        self.state = AppState::Dashboard;
                     }
-                    _ => {}
                 }
                 self.current_item = None;
                 self.scroll_offset = 0;
@@ -341,7 +338,7 @@ impl App {
         self.loading = true;
         self.status_message = Some("Loading...".to_string());
         
-        let limit = self.config.finnhub.max_articles.min(30);
+        let limit = self.config.finnhub.max_articles.max(100);
         self.items = self.registry.fetch_all(limit).await;
         self.selected_idx = 0;
         
@@ -357,7 +354,7 @@ impl App {
         self.loading = true;
         self.status_message = Some("Loading...".to_string());
         
-        let limit = self.config.finnhub.max_articles.min(50);
+        let limit = self.config.finnhub.max_articles.max(100);
         
         match self.registry.fetch_from(provider_id, limit).await {
             Ok(items) => {

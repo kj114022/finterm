@@ -79,8 +79,7 @@ pub fn render_feed_item(f: &mut Frame, item: &FeedItem, scroll_offset: usize) {
     
     // Render content with scrolling
     let content_text = item.content.as_ref()
-        .or(item.summary.as_ref())
-        .map(|s| s.clone())
+        .or(item.summary.as_ref()).cloned()
         .unwrap_or_else(|| {
             if let Some(url) = &item.url {
                 format!("No content preview available.\n\nOpen in browser: {}", url)

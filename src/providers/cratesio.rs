@@ -60,16 +60,7 @@ pub struct CrateItem {
     pub documentation: Option<String>,
 }
 
-/// Summary response from crates.io API
-#[derive(Debug, Deserialize)]
-pub struct CratesSummary {
-    pub num_downloads: i64,
-    pub num_crates: i64,
-    pub new_crates: Vec<CrateItem>,
-    pub most_downloaded: Vec<CrateItem>,
-    pub most_recently_downloaded: Vec<CrateItem>,
-    pub just_updated: Vec<CrateItem>,
-}
+
 
 /// Crates.io provider
 pub struct CratesIoProvider {
@@ -98,21 +89,7 @@ impl CratesIoProvider {
     pub fn set_category(&mut self, category: CratesCategory) {
         self.category = category;
     }
-    
-    /// Fetch summary from crates.io
-    async fn fetch_summary(&self) -> Result<CratesSummary> {
-        let url = format!("{}/summary", CRATES_IO_API);
-        
-        let summary: CratesSummary = self.client
-            .get(&url)
-            .send()
-            .await?
-            .json()
-            .await
-            .map_err(|e| ProviderError::Parse(e.to_string()))?;
-        
-        Ok(summary)
-    }
+
     
     /// Convert CrateItem to FeedItem
     fn convert_to_feed_item(&self, crate_item: CrateItem) -> FeedItem {
@@ -180,16 +157,31 @@ impl FeedProvider for CratesIoProvider {
     }
     
     async fn fetch_items(&self, limit: usize) -> Result<Vec<FeedItem>> {
-        let summary = self.fetch_summary().await?;
-        
-        let crates = match self.category {
-            CratesCategory::New => summary.new_crates,
-            CratesCategory::JustUpdated => summary.just_updated,
-            CratesCategory::MostDownloaded => summary.most_downloaded,
-            CratesCategory::RecentlyDownloaded => summary.most_recently_downloaded,
+        // Use paginated API for larger feeds (summary only returns 10)
+        let sort = match self.category {
+            CratesCategory::New => "new",
+            CratesCategory::JustUpdated => "recent-updates",
+            CratesCategory::MostDownloaded => "downloads",
+            CratesCategory::RecentlyDownloaded => "recent-downloads",
         };
         
-        let items: Vec<FeedItem> = crates
+        let per_page = limit.min(100); // crates.io max is 100
+        let url = format!("{}/crates?sort={}&per_page={}", CRATES_IO_API, sort, per_page);
+        
+        #[derive(Deserialize)]
+        struct CratesResponse {
+            crates: Vec<CrateItem>,
+        }
+        
+        let response: CratesResponse = self.client
+            .get(&url)
+            .send()
+            .await?
+            .json()
+            .await
+            .map_err(|e| ProviderError::Parse(e.to_string()))?;
+        
+        let items: Vec<FeedItem> = response.crates
             .into_iter()
             .take(limit)
             .map(|c| self.convert_to_feed_item(c))
@@ -246,9 +238,10 @@ mod tests {
     }
     
     #[tokio::test]
-    async fn test_fetch_summary() {
+    async fn test_fetch_items() {
         let provider = CratesIoProvider::new(None).unwrap();
-        let result = provider.fetch_summary().await;
+        let result = provider.fetch_items(10).await;
         assert!(result.is_ok());
+        assert!(!result.unwrap().is_empty());
     }
 }
