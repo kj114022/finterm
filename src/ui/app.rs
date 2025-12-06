@@ -211,6 +211,9 @@ impl App {
             Action::NavigateDown => {
                 if self.selected_idx < self.items.len().saturating_sub(1) {
                     self.selected_idx += 1;
+                } else if !self.loading && !self.items.is_empty() {
+                    // Infinite scroll: load more when at bottom
+                    self.load_more_items().await?;
                 }
             }
             Action::GoToTop => {
@@ -346,6 +349,45 @@ impl App {
         self.status_message = Some(format!("Loaded {} items", self.items.len()));
         self.last_update = Instant::now();
         
+        Ok(())
+    }
+    
+    /// Load more items for infinite scroll
+    async fn load_more_items(&mut self) -> Result<()> {
+        if self.loading {
+            return Ok(());
+        }
+        
+        self.loading = true;
+        self.status_message = Some("Loading more...".to_string());
+        
+        let current_count = self.items.len();
+        let batch_size = 50;
+        
+        if let AppState::Feed(provider_id) = &self.state.clone() {
+            if let Some(provider) = self.registry.get(provider_id) {
+                if provider.supports_offset() {
+                    match provider.fetch_items_with_offset(current_count, batch_size).await {
+                        Ok(new_items) => {
+                            let new_count = new_items.len();
+                            if new_count > 0 {
+                                self.items.extend(new_items);
+                                self.status_message = Some(format!("Loaded {} more ({} total)", new_count, self.items.len()));
+                            } else {
+                                self.status_message = Some("End of feed".to_string());
+                            }
+                        }
+                        Err(e) => {
+                            self.status_message = Some(format!("Error: {}", e));
+                        }
+                    }
+                } else {
+                    self.status_message = Some("End of feed".to_string());
+                }
+            }
+        }
+        
+        self.loading = false;
         Ok(())
     }
     

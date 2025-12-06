@@ -93,6 +93,16 @@ pub trait FeedProvider: Send + Sync {
     /// Fetch latest items from the feed
     async fn fetch_items(&self, limit: usize) -> Result<Vec<FeedItem>>;
     
+    /// Fetch items with offset for infinite scroll (default: not supported)
+    async fn fetch_items_with_offset(&self, _offset: usize, _limit: usize) -> Result<Vec<FeedItem>> {
+        Err(ProviderError::Other("Offset not supported".to_string()))
+    }
+    
+    /// Check if provider supports infinite scroll
+    fn supports_offset(&self) -> bool {
+        false
+    }
+    
     /// Search items (optional capability - default returns empty)
     async fn search(&self, _query: &str, _limit: usize) -> Result<Vec<FeedItem>> {
         Ok(vec![])

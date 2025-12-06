@@ -132,15 +132,9 @@ impl HackerNewsProvider {
     }
     
     /// Fetch items with offset for infinite scroll
-    pub async fn fetch_items_with_offset(&self, offset: usize, limit: usize) -> Result<Vec<FeedItem>> {
-        // Get cached IDs or fetch new ones
-        let ids: Vec<u64> = {
-            let cached = self.cached_ids.lock().ok();
-            match cached {
-                Some(cache) if !cache.is_empty() => cache.clone(),
-                _ => self.fetch_all_story_ids().await?,
-            }
-        };
+    pub async fn fetch_offset_items(&self, offset: usize, limit: usize) -> Result<Vec<FeedItem>> {
+        // Fetch all story IDs
+        let ids = self.fetch_all_story_ids().await?;
         
         // Get slice with offset
         let slice: Vec<u64> = ids.into_iter()
@@ -317,6 +311,14 @@ impl FeedProvider for HackerNewsProvider {
     
     fn supports_search(&self) -> bool {
         false  // HN API doesn't have search (would need Algolia)
+    }
+    
+    fn supports_offset(&self) -> bool {
+        true  // HN supports infinite scroll
+    }
+    
+    async fn fetch_items_with_offset(&self, offset: usize, limit: usize) -> Result<Vec<FeedItem>> {
+        self.fetch_offset_items(offset, limit).await
     }
 }
 
