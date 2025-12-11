@@ -7,6 +7,7 @@ pub mod finnhub;
 pub mod hackernews;
 pub mod cratesio;
 pub mod reddit;
+pub mod link_preview;
 pub mod registry;
 
 use crate::models::FeedItem;
