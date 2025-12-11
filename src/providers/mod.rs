@@ -6,6 +6,7 @@
 pub mod finnhub;
 pub mod hackernews;
 pub mod cratesio;
+pub mod reddit;
 pub mod registry;
 
 use crate::models::FeedItem;
@@ -124,3 +125,4 @@ pub use registry::ProviderRegistry;
 pub use finnhub::FinnhubProvider;
 pub use hackernews::HackerNewsProvider;
 pub use cratesio::CratesIoProvider;
+pub use reddit::RedditProvider;

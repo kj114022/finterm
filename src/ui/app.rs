@@ -5,7 +5,8 @@
 use crate::cache::CacheManager;
 use crate::config::Config;
 use crate::models::FeedItem;
-use crate::providers::{FinnhubProvider, HackerNewsProvider, CratesIoProvider, ProviderRegistry};
+use crate::providers::{FinnhubProvider, HackerNewsProvider, CratesIoProvider, RedditProvider, ProviderRegistry};
+use crate::models::Comment;
 use crate::utils::Action;
 use crate::ui::views;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
@@ -40,6 +41,8 @@ pub enum AppState {
     Feed(String),  // provider_id
     /// Article/item detail view
     Article,
+    /// Comments view for current item
+    Comments,
     /// Help screen
     Help,
 }
@@ -61,6 +64,12 @@ pub struct App {
     
     // Landing page state
     pub landing_selected: usize,
+    
+    // Comments state
+    pub comments: Vec<Comment>,
+    pub comments_selected: usize,
+    pub comments_scroll: usize,
+    pub comments_loading: bool,
     
     // UI state
     pub scroll_offset: usize,
@@ -93,6 +102,17 @@ impl App {
             registry.register(cratesio);
         }
         
+        // Register Reddit provider
+        if config.reddit.enabled {
+            if let Ok(reddit) = RedditProvider::new(
+                config.reddit.subreddits.clone(),
+                Some(config.reddit.sort.clone()),
+                true,
+            ) {
+                registry.register(reddit);
+            }
+        }
+        
         // Create cache
         let cache_dir = config.cache_dir();
         let cache = CacheManager::new(cache_dir, config.cache.max_size_mb)
@@ -108,6 +128,10 @@ impl App {
             selected_idx: 0,
             current_item: None,
             landing_selected: 0,
+            comments: Vec::new(),
+            comments_selected: 0,
+            comments_scroll: 0,
+            comments_loading: false,
             scroll_offset: 0,
             status_message: None,
             last_update: Instant::now(),
@@ -120,6 +144,11 @@ impl App {
         loop {
             // Render
             terminal.draw(|f| self.render(f))?;
+            
+            // Load comments if needed
+            if self.state == AppState::Comments && self.comments_loading && self.comments.is_empty() {
+                self.load_comments_for_current_item().await?;
+            }
             
             // Handle input with timeout
             if event::poll(Duration::from_millis(100))? {
@@ -146,6 +175,7 @@ impl App {
             AppState::Landing => self.handle_landing_input(key, action).await?,
             AppState::Dashboard | AppState::Feed(_) => self.handle_feed_input(key, action).await?,
             AppState::Article => self.handle_article_input(action),
+            AppState::Comments => self.handle_comments_input(action),
             AppState::Help => self.handle_help_input(action),
         }
         
@@ -300,6 +330,48 @@ impl App {
                     self.scroll_offset = 0;
                 }
             }
+            Action::ViewComments => {
+                // Transition to comments view - comments will be loaded async
+                if self.current_item.is_some() {
+                    self.state = AppState::Comments;
+                    self.comments_loading = true;
+                    self.status_message = Some("Loading comments...".to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+    
+    /// Handle comments view input
+    fn handle_comments_input(&mut self, action: Action) {
+        let comment_count = self.comments.len();
+        
+        match action {
+            Action::Quit => self.should_quit = true,
+            Action::Back => {
+                // Return to article view
+                self.state = AppState::Article;
+                self.comments.clear();
+                self.comments_selected = 0;
+                self.comments_scroll = 0;
+            }
+            Action::NavigateUp => {
+                if self.comments_selected > 0 {
+                    self.comments_selected -= 1;
+                }
+            }
+            Action::NavigateDown => {
+                if self.comments_selected < comment_count.saturating_sub(1) {
+                    self.comments_selected += 1;
+                }
+            }
+            Action::GoToTop => {
+                self.comments_selected = 0;
+                self.comments_scroll = 0;
+            }
+            Action::GoToBottom => {
+                self.comments_selected = comment_count.saturating_sub(1);
+            }
             _ => {}
         }
     }
@@ -430,17 +502,74 @@ impl App {
         Ok(())
     }
     
+    /// Load comments for the current item
+    pub async fn load_comments_for_current_item(&mut self) -> Result<()> {
+        let item = match &self.current_item {
+            Some(item) => item.clone(),
+            None => return Ok(()),
+        };
+        
+        self.comments_loading = true;
+        self.comments.clear();
+        
+        let provider_id = item.provider_id.as_str();
+        
+        match provider_id {
+            "hackernews" => {
+                if let Some(hn_id) = item.metadata.hn_id {
+                    if let Ok(hn) = HackerNewsProvider::new(None) {
+                        match hn.fetch_comments(hn_id, 3).await {
+                            Ok(comments) => {
+                                self.comments = comments;
+                                self.status_message = Some(format!("Loaded {} comments", self.comments.len()));
+                            }
+                            Err(e) => {
+                                self.status_message = Some(format!("Error loading comments: {}", e));
+                            }
+                        }
+                    }
+                }
+            }
+            "reddit" => {
+                if let (Some(subreddit), Some(post_id)) = 
+                    (item.metadata.subreddit.as_ref(), item.metadata.reddit_id.as_ref()) 
+                {
+                    // Create a new Reddit provider instance for comment fetching
+                    if let Ok(reddit) = RedditProvider::new(vec![], None, true) {
+                        match reddit.fetch_comments(subreddit, post_id, 3).await {
+                            Ok(comments) => {
+                                self.comments = comments;
+                                self.status_message = Some(format!("Loaded {} comments", self.comments.len()));
+                            }
+                            Err(e) => {
+                                self.status_message = Some(format!("Error loading comments: {}", e));
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {
+                self.status_message = Some("Comments not available for this source".to_string());
+            }
+        }
+        
+        self.comments_loading = false;
+        Ok(())
+    }
+    
     /// Render the UI based on current state
     fn render(&mut self, f: &mut ratatui::Frame) {
+        use crate::ui::ProviderColors;
         match &self.state {
             AppState::Landing => {
                 views::landing::render(f, &self.registry, self.landing_selected);
             }
             AppState::Dashboard => {
-                views::feed::render(
+                views::dashboard::render(
                     f,
                     "All Sources",
-                    "🌐",
+                    "A",
+                    ProviderColors::hackernews(),  // Default accent
                     &self.items,
                     self.selected_idx,
                     self.status_message.as_deref(),
@@ -450,12 +579,15 @@ impl App {
             AppState::Feed(provider_id) => {
                 let (name, icon) = self.registry.get(provider_id)
                     .map(|p| (p.name().to_string(), p.icon().to_string()))
-                    .unwrap_or(("Unknown".to_string(), "❓".to_string()));
+                    .unwrap_or(("Unknown".to_string(), "?".to_string()));
                 
-                views::feed::render(
+                let provider_color = ProviderColors::for_provider(provider_id);
+                
+                views::dashboard::render(
                     f,
                     &name,
                     &icon,
+                    provider_color,
                     &self.items,
                     self.selected_idx,
                     self.status_message.as_deref(),
@@ -466,6 +598,19 @@ impl App {
                 if let Some(item) = &self.current_item {
                     views::article::render_feed_item(f, item, self.scroll_offset);
                 }
+            }
+            AppState::Comments => {
+                let provider_name = self.current_item
+                    .as_ref()
+                    .map(|i| i.source.clone())
+                    .unwrap_or_else(|| "Comments".to_string());
+                views::comments::render(
+                    f,
+                    &self.comments,
+                    self.comments_selected,
+                    self.comments_scroll,
+                    &provider_name,
+                );
             }
             AppState::Help => {
                 views::help::render(f, &crate::utils::get_help_text(self.config.ui.vim_mode));

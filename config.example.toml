@@ -11,6 +11,12 @@ categories = ["top", "new", "show", "ask"]
 include_dead = false
 fetch_full_content = true  # Fetch and parse linked articles
 
+[reddit]
+subreddits = ["technology", "programming", "rust", "finance"]
+sort = "hot"  # Options: hot, new, top, rising
+max_posts = 50
+enabled = true
+
 [ui]
 theme = "dark"  # Options: dark, light
 vim_mode = true  # Enable vim-style navigation

@@ -1,6 +1,6 @@
 //! Hacker News provider
 
-use crate::models::{FeedItem, FeedItemMetadata};
+use crate::models::{FeedItem, FeedItemMetadata, Comment};
 use crate::providers::{FeedProvider, ProviderError, ProviderStatus, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -221,6 +221,7 @@ impl HackerNewsProvider {
         let metadata = FeedItemMetadata {
             score: item.score,
             comments: item.descendants,
+            hn_id: Some(item.id),  // Store HN ID for fetching comments
             ..Default::default()
         };
         
@@ -248,6 +249,78 @@ impl HackerNewsProvider {
         }
         
         feed_item
+    }
+    
+    /// Fetch comments for a story by ID
+    pub async fn fetch_comments(&self, story_id: u64, max_depth: u32) -> Result<Vec<Comment>> {
+        let item = self.fetch_item(story_id).await?;
+        
+        let comment_ids = item.kids.unwrap_or_default();
+        if comment_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        
+        // Fetch top-level comments in parallel
+        let futures: Vec<_> = comment_ids
+            .into_iter()
+            .take(20)  // Limit to 20 top-level comments
+            .map(|id| self.fetch_comment_tree(id, 0, max_depth))
+            .collect();
+        
+        let results = join_all(futures).await;
+        
+        let comments: Vec<Comment> = results
+            .into_iter()
+            .flatten()
+            .collect();
+        
+        Ok(comments)
+    }
+    
+    /// Recursively fetch a comment and its replies
+    async fn fetch_comment_tree(&self, comment_id: u64, depth: u32, max_depth: u32) -> Option<Comment> {
+        if depth > max_depth {
+            return None;
+        }
+        
+        let item = self.fetch_item(comment_id).await.ok()?;
+        
+        // Skip deleted/dead comments
+        if item.deleted.unwrap_or(false) || item.dead.unwrap_or(false) {
+            return None;
+        }
+        
+        let author = item.by.unwrap_or_else(|| "[deleted]".to_string());
+        let text = item.text.unwrap_or_default();
+        let text_plain = html2text::from_read(text.as_bytes(), 80);
+        
+        let created_at = DateTime::from_timestamp(item.time, 0)
+            .unwrap_or_else(Utc::now);
+        
+        let mut comment = Comment::new(
+            comment_id.to_string(),
+            author,
+            text.clone(),
+            created_at,
+        );
+        comment.text_plain = Some(text_plain);
+        comment.depth = depth;
+        
+        // Fetch replies (limit depth for performance)
+        if depth < max_depth {
+            if let Some(kid_ids) = item.kids {
+                let futures: Vec<_> = kid_ids
+                    .into_iter()
+                    .take(10)  // Limit replies per comment
+                    .map(|id| self.fetch_comment_tree(id, depth + 1, max_depth))
+                    .collect();
+                
+                let replies = join_all(futures).await;
+                comment.replies = replies.into_iter().flatten().collect();
+            }
+        }
+        
+        Some(comment)
     }
 }
 

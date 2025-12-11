@@ -1,41 +1,100 @@
+# ==============================================================================
+# FinTerm - Professional .gitignore
+# ==============================================================================
+
 # Build artifacts
 /target/
 debug/
+release/
 *.pdb
+*.exe
+*.dll
+*.so
+*.dylib
 
-# Cargo
-Cargo.lock
+# Cargo lock (keep for binaries, ignore for libraries)
+# Cargo.lock  # Uncomment if this is a library
 
-# IDE
+# ==============================================================================
+# IDE and Editor Files
+# ==============================================================================
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
-.DS_Store
+*.sublime-project
+*.sublime-workspace
 
-# Logs
+# ==============================================================================
+# Confidential / Secrets - NEVER COMMIT
+# ==============================================================================
+
+# Local configuration with API keys
+config.toml
+*.local.toml
+secrets.toml
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# API keys and credentials
+*.pem
+*.key
+*.p12
+*.pfx
+
+# ==============================================================================
+# Cache and Logs
+# ==============================================================================
+.cache/
 *.log
 logs/
-
-# Local configuration (may contain API keys)
-config.toml
-.env
-.env.local
-
-# Cache
-.cache/
-
-# Testing artifacts
 *.profraw
 coverage/
+.coverage
 
-# OS files
-Thumbs.db
+# ==============================================================================
+# OS Generated Files
+# ==============================================================================
 .DS_Store
+.DS_Store?
 ._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ==============================================================================
+# Project Specific
+# ==============================================================================
+
+# Homebrew tap (separate repo)
 homebrew-finterm/
 
-# Project files
-IDEA.md
+# Release archives
 *.tar.gz
+*.zip
+
+# Testing artifacts
+test-output/
+
+# Agent/AI specific
+.agent/
+
+# Personal notes
+IDEA.md
+TODO.md
+NOTES.md
+*.draft.md
+
+# ==============================================================================
+# Backup Files
+# ==============================================================================
+*.bak
+*.backup
+*.old
+*.orig

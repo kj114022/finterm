@@ -28,6 +28,9 @@ pub struct Config {
     pub hackernews: HackerNewsConfig,
     
     #[serde(default)]
+    pub reddit: RedditConfig,
+    
+    #[serde(default)]
     pub ui: UiConfig,
     
     #[serde(default)]
@@ -61,6 +64,18 @@ pub struct HackerNewsConfig {
     pub include_dead: bool,
     #[serde(default = "default_true")]
     pub fetch_full_content: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedditConfig {
+    #[serde(default = "default_subreddits")]
+    pub subreddits: Vec<String>,
+    #[serde(default = "default_reddit_sort")]
+    pub sort: String,
+    #[serde(default = "default_max_posts")]
+    pub max_posts: usize,
+    #[serde(default = "default_true")]
+    pub enabled: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,6 +136,18 @@ fn default_categories() -> Vec<String> {
     vec!["top".to_string(), "new".to_string(), "show".to_string(), "ask".to_string()]
 }
 
+fn default_subreddits() -> Vec<String> {
+    vec!["technology".to_string(), "programming".to_string(), "rust".to_string(), "finance".to_string()]
+}
+
+fn default_reddit_sort() -> String {
+    "hot".to_string()
+}
+
+fn default_max_posts() -> usize {
+    50
+}
+
 fn default_theme() -> String {
     "dark".to_string()
 }
@@ -172,6 +199,17 @@ impl Default for HackerNewsConfig {
             categories: default_categories(),
             include_dead: false,
             fetch_full_content: true,
+        }
+    }
+}
+
+impl Default for RedditConfig {
+    fn default() -> Self {
+        Self {
+            subreddits: default_subreddits(),
+            sort: default_reddit_sort(),
+            max_posts: default_max_posts(),
+            enabled: true,
         }
     }
 }
