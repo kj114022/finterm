@@ -126,7 +126,7 @@ impl FeedProvider for FinnhubProvider {
     }
     
     fn icon(&self) -> &str {
-        "📈"
+        "[FH]"
     }
     
     fn status(&self) -> ProviderStatus {

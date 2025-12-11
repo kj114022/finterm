@@ -89,14 +89,6 @@ impl App {
             registry.register(hn);
         }
         
-        // Register Finnhub provider
-        if let Ok(finnhub) = FinnhubProvider::new(
-            config.finnhub.api_key.clone(),
-            Some(config.finnhub.category.clone()),
-        ) {
-            registry.register(finnhub);
-        }
-        
         // Register Crates.io provider
         if let Ok(cratesio) = CratesIoProvider::new(None) {
             registry.register(cratesio);
@@ -111,6 +103,14 @@ impl App {
             ) {
                 registry.register(reddit);
             }
+        }
+        
+        // Register Finnhub provider (last - requires API key)
+        if let Ok(finnhub) = FinnhubProvider::new(
+            config.finnhub.api_key.clone(),
+            Some(config.finnhub.category.clone()),
+        ) {
+            registry.register(finnhub);
         }
         
         // Create cache

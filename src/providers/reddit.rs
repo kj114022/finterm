@@ -457,7 +457,7 @@ impl FeedProvider for RedditProvider {
     }
 
     fn icon(&self) -> &str {
-        "R"
+        "[RD]"
     }
 
     fn status(&self) -> ProviderStatus {

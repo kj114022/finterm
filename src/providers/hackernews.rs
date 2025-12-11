@@ -339,7 +339,7 @@ impl FeedProvider for HackerNewsProvider {
     }
     
     fn icon(&self) -> &str {
-        "🟠"
+        "[HN]"
     }
     
     fn status(&self) -> ProviderStatus {

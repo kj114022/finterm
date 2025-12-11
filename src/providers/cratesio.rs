@@ -141,7 +141,7 @@ impl FeedProvider for CratesIoProvider {
     }
     
     fn icon(&self) -> &str {
-        "📦"
+        "[CR]"
     }
     
     fn status(&self) -> ProviderStatus {
