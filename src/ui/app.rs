@@ -103,14 +103,12 @@ impl App {
         }
 
         // Register Reddit provider
-        if config.reddit.enabled {
-            if let Ok(reddit) = RedditProvider::new(
-                config.reddit.subreddits.clone(),
-                Some(config.reddit.sort.clone()),
-                true,
-            ) {
-                registry.register(reddit);
-            }
+        if let Ok(reddit) = RedditProvider::new(
+            config.reddit.subreddits.clone(),
+            Some(config.reddit.sort.clone()),
+            true,
+        ) {
+            registry.register(reddit);
         }
 
         // Register Finnhub provider (last - requires API key)
