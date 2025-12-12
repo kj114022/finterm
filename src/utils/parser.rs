@@ -35,13 +35,13 @@ pub fn wrap_text(text: &str, width: usize) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_truncate() {
         assert_eq!(truncate("Hello, World!", 10), "Hello, ...");
         assert_eq!(truncate("Hi", 10), "Hi");
     }
-    
+
     #[test]
     fn test_clean_text() {
         let dirty = "  Hello  \n\n  World  \n  ";

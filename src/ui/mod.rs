@@ -4,4 +4,4 @@ pub mod theme;
 pub mod views;
 
 pub use app::App;
-pub use theme::{Theme, ProviderColors};
+pub use theme::{ProviderColors, Theme};

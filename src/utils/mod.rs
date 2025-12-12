@@ -1,5 +1,5 @@
-pub mod parser;
 pub mod keybinds;
+pub mod parser;
 
-pub use parser::*;
 pub use keybinds::*;
+pub use parser::*;

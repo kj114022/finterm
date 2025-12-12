@@ -23,16 +23,16 @@ pub fn render(
     provider_name: &str,
 ) {
     let size = f.size();
-    
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Header
-            Constraint::Min(5),     // Comments
-            Constraint::Length(2),  // Help bar
+            Constraint::Length(3), // Header
+            Constraint::Min(5),    // Comments
+            Constraint::Length(2), // Help bar
         ])
         .split(size);
-    
+
     render_header(f, chunks[0], comments, provider_name);
     render_comments(f, chunks[1], comments, selected_idx, scroll_offset);
     render_help(f, chunks[2]);
@@ -41,14 +41,19 @@ pub fn render(
 fn render_header(f: &mut Frame, area: Rect, comments: &[Comment], provider_name: &str) {
     let total = total_comment_count(comments);
     let title = format!(" Comments ({}) - {} ", total, provider_name);
-    
-    let header = Paragraph::new(Line::from(vec![
-        Span::styled(title, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-    ]))
-    .block(Block::default()
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan)));
-    
+
+    let header = Paragraph::new(Line::from(vec![Span::styled(
+        title,
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    )]))
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Cyan)),
+    );
+
     f.render_widget(header, area);
 }
 
@@ -62,7 +67,7 @@ fn render_comments(
     // Flatten comments for display
     let flattened = flatten_comments(comments);
     let visible_height = area.height.saturating_sub(2) as usize;
-    
+
     let list_items: Vec<ListItem> = flattened
         .iter()
         .skip(scroll_offset)
@@ -74,34 +79,43 @@ fn render_comments(
             render_comment_line(comment, *depth, is_selected, area.width as usize)
         })
         .collect();
-    
-    let list = List::new(list_items)
-        .block(Block::default()
+
+    let list = List::new(list_items).block(
+        Block::default()
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::DarkGray)));
-    
+            .border_style(Style::default().fg(Color::DarkGray)),
+    );
+
     f.render_widget(list, area);
 }
 
-fn render_comment_line(comment: &Comment, depth: u32, is_selected: bool, width: usize) -> ListItem<'static> {
+fn render_comment_line(
+    comment: &Comment,
+    depth: u32,
+    is_selected: bool,
+    width: usize,
+) -> ListItem<'static> {
     let indent = "  ".repeat((depth as usize).min(MAX_VISIBLE_DEPTH as usize) * INDENT_WIDTH);
     let depth_indicator = if depth > 0 { "|" } else { "" };
-    
+
     let base_style = if is_selected {
-        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default()
     };
-    
+
     let author_style = Style::default().fg(Color::Green);
     let score_style = Style::default().fg(Color::Cyan);
     let time_style = Style::default().fg(Color::DarkGray);
-    
+
     // Header line: author, score, time
-    let score_text = comment.score
+    let score_text = comment
+        .score
         .map(|s| format!(" [{}]", s))
         .unwrap_or_default();
-    
+
     let header = Line::from(vec![
         Span::raw(indent.clone()),
         Span::raw(depth_indicator),
@@ -109,7 +123,7 @@ fn render_comment_line(comment: &Comment, depth: u32, is_selected: bool, width: 
         Span::styled(score_text, score_style),
         Span::styled(format!(" {}", comment.time_ago()), time_style),
     ]);
-    
+
     // Text preview (truncated)
     let text = comment.text_plain.as_ref().unwrap_or(&comment.text);
     let available_width = width.saturating_sub(indent.len() + 4);
@@ -120,16 +134,13 @@ fn render_comment_line(comment: &Comment, depth: u32, is_selected: bool, width: 
         .chars()
         .take(available_width)
         .collect();
-    
+
     let text_line = Line::from(vec![
         Span::raw(indent),
-        Span::styled(
-            if is_selected { "> " } else { "  " },
-            base_style,
-        ),
+        Span::styled(if is_selected { "> " } else { "  " }, base_style),
         Span::styled(text_preview, base_style),
     ]);
-    
+
     // Combined into a single list item with 2 lines
     ListItem::new(vec![header, text_line])
 }
@@ -145,10 +156,12 @@ fn render_help(f: &mut Frame, area: Rect) {
         Span::styled("Esc", Style::default().fg(Color::Yellow)),
         Span::raw(":Back"),
     ]))
-    .block(Block::default()
-        .borders(Borders::TOP)
-        .border_style(Style::default().fg(Color::DarkGray)));
-    
+    .block(
+        Block::default()
+            .borders(Borders::TOP)
+            .border_style(Style::default().fg(Color::DarkGray)),
+    );
+
     f.render_widget(help, area);
 }
 

@@ -2,7 +2,7 @@
 //!
 //! Fetches posts from Reddit subreddits via their public RSS feeds.
 
-use crate::models::{FeedItem, FeedItemMetadata, Comment};
+use crate::models::{Comment, FeedItem, FeedItemMetadata};
 use crate::providers::{FeedProvider, ProviderError, ProviderStatus, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -77,7 +77,7 @@ impl RedditProvider {
     /// Create a new Reddit provider
     pub fn new(subreddits: Vec<String>, sort: Option<String>, enabled: bool) -> Result<Self> {
         let client = Client::builder()
-            .timeout(Duration::from_secs(10))  // Reduced for faster response
+            .timeout(Duration::from_secs(10)) // Reduced for faster response
             .connect_timeout(Duration::from_secs(5))
             .user_agent("finterm/0.1.0")
             .build()
@@ -206,10 +206,7 @@ impl RedditProvider {
                 }
                 Ok(Event::Eof) => break,
                 Err(e) => {
-                    return Err(ProviderError::Parse(format!(
-                        "XML parse error: {}",
-                        e
-                    )));
+                    return Err(ProviderError::Parse(format!("XML parse error: {}", e)));
                 }
                 _ => {}
             }
@@ -311,19 +308,17 @@ impl RedditProvider {
     /// Fetch items from all configured subreddits in parallel
     async fn fetch_from_all_subreddits(&self, limit: usize) -> Result<Vec<FeedItem>> {
         let items_per_sub = (limit / self.subreddits.len()).max(10);
-        
+
         // Fetch all subreddits in parallel for real-time performance
-        let futures: Vec<_> = self.subreddits
+        let futures: Vec<_> = self
+            .subreddits
             .iter()
             .map(|subreddit| self.fetch_single_subreddit(subreddit.clone(), items_per_sub))
             .collect();
-        
+
         let results = join_all(futures).await;
-        
-        let mut all_items: Vec<FeedItem> = results
-            .into_iter()
-            .flatten()
-            .collect();
+
+        let mut all_items: Vec<FeedItem> = results.into_iter().flatten().collect();
 
         // Sort by publish date (newest first)
         all_items.sort_by(|a, b| b.published_at.cmp(&a.published_at));
@@ -331,29 +326,27 @@ impl RedditProvider {
 
         Ok(all_items)
     }
-    
+
     /// Fetch items from a single subreddit
     async fn fetch_single_subreddit(&self, subreddit: String, limit: usize) -> Vec<FeedItem> {
         match self.fetch_feed(&subreddit).await {
-            Ok(xml) => {
-                match self.parse_feed(&xml, &subreddit) {
-                    Ok(mut items) => {
-                        items.truncate(limit);
-                        items
-                    }
-                    Err(e) => {
-                        tracing::warn!("Failed to parse r/{}: {}", subreddit, e);
-                        vec![]
-                    }
+            Ok(xml) => match self.parse_feed(&xml, &subreddit) {
+                Ok(mut items) => {
+                    items.truncate(limit);
+                    items
                 }
-            }
+                Err(e) => {
+                    tracing::warn!("Failed to parse r/{}: {}", subreddit, e);
+                    vec![]
+                }
+            },
             Err(e) => {
                 tracing::warn!("Failed to fetch r/{}: {}", subreddit, e);
                 vec![]
             }
         }
     }
-    
+
     /// Extract post ID from Reddit entry ID URL
     fn extract_post_id(&self, entry_id: &str) -> String {
         // Entry ID is like: https://www.reddit.com/r/rust/comments/abc123/...
@@ -364,11 +357,19 @@ impl RedditProvider {
             .unwrap_or(entry_id)
             .to_string()
     }
-    
+
     /// Fetch comments for a Reddit post using JSON API
-    pub async fn fetch_comments(&self, subreddit: &str, post_id: &str, max_depth: u32) -> Result<Vec<Comment>> {
-        let url = format!("{}/r/{}/comments/{}.json", REDDIT_BASE_URL, subreddit, post_id);
-        
+    pub async fn fetch_comments(
+        &self,
+        subreddit: &str,
+        post_id: &str,
+        max_depth: u32,
+    ) -> Result<Vec<Comment>> {
+        let url = format!(
+            "{}/r/{}/comments/{}.json",
+            REDDIT_BASE_URL, subreddit, post_id
+        );
+
         let response = self
             .client
             .get(&url)
@@ -377,11 +378,11 @@ impl RedditProvider {
             .text()
             .await
             .map_err(|e| ProviderError::Network(e.to_string()))?;
-        
+
         // Parse JSON response
-        let json: serde_json::Value = serde_json::from_str(&response)
-            .map_err(|e| ProviderError::Parse(e.to_string()))?;
-        
+        let json: serde_json::Value =
+            serde_json::from_str(&response).map_err(|e| ProviderError::Parse(e.to_string()))?;
+
         // Reddit returns an array: [post_data, comments_data]
         let comments_listing = json
             .get(1)
@@ -390,54 +391,67 @@ impl RedditProvider {
             .and_then(|v| v.as_array())
             .cloned()
             .unwrap_or_default();
-        
+
         let comments: Vec<Comment> = comments_listing
             .into_iter()
             .filter_map(|child| self.parse_reddit_comment(&child, 0, max_depth))
             .collect();
-        
+
         Ok(comments)
     }
-    
+
     /// Parse a Reddit comment from JSON
-    fn parse_reddit_comment(&self, json: &serde_json::Value, depth: u32, max_depth: u32) -> Option<Comment> {
+    fn parse_reddit_comment(
+        &self,
+        json: &serde_json::Value,
+        depth: u32,
+        max_depth: u32,
+    ) -> Option<Comment> {
         if depth > max_depth {
             return None;
         }
-        
+
         let kind = json.get("kind")?.as_str()?;
-        if kind != "t1" {  // t1 = comment
+        if kind != "t1" {
+            // t1 = comment
             return None;
         }
-        
+
         let data = json.get("data")?;
-        
+
         let id = data.get("id")?.as_str()?.to_string();
         let author = data.get("author")?.as_str()?.to_string();
         let body = data.get("body")?.as_str()?.to_string();
         let score = data.get("score").and_then(|v| v.as_i64()).map(|v| v as i32);
-        let created_utc = data.get("created_utc").and_then(|v| v.as_f64()).unwrap_or(0.0);
-        
-        let created_at = DateTime::from_timestamp(created_utc as i64, 0)
-            .unwrap_or_else(Utc::now);
-        
+        let created_utc = data
+            .get("created_utc")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+
+        let created_at = DateTime::from_timestamp(created_utc as i64, 0).unwrap_or_else(Utc::now);
+
         let body_plain = html2text::from_read(body.as_bytes(), 80);
-        
+
         let mut comment = Comment::new(id, author, body.clone(), created_at);
         comment.text_plain = Some(body_plain);
         comment.score = score;
         comment.depth = depth;
-        
+
         // Parse replies
         if depth < max_depth {
-            if let Some(replies) = data.get("replies").and_then(|v| v.get("data")).and_then(|v| v.get("children")).and_then(|v| v.as_array()) {
+            if let Some(replies) = data
+                .get("replies")
+                .and_then(|v| v.get("data"))
+                .and_then(|v| v.get("children"))
+                .and_then(|v| v.as_array())
+            {
                 comment.replies = replies
                     .iter()
                     .filter_map(|r| self.parse_reddit_comment(r, depth + 1, max_depth))
                     .collect();
             }
         }
-        
+
         Some(comment)
     }
 }
@@ -483,8 +497,7 @@ mod tests {
 
     #[test]
     fn test_provider_id() {
-        let provider =
-            RedditProvider::new(vec!["rust".to_string()], None, true).unwrap();
+        let provider = RedditProvider::new(vec!["rust".to_string()], None, true).unwrap();
         assert_eq!(provider.id(), "reddit");
     }
 
@@ -500,8 +513,7 @@ mod tests {
     #[test]
     fn test_build_feed_url() {
         let provider =
-            RedditProvider::new(vec!["rust".to_string()], Some("new".to_string()), true)
-                .unwrap();
+            RedditProvider::new(vec!["rust".to_string()], Some("new".to_string()), true).unwrap();
         let url = provider.build_feed_url("rust");
         assert_eq!(url, "https://www.reddit.com/r/rust/new.rss");
     }

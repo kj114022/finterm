@@ -15,7 +15,7 @@ pub async fn fetch_link_preview(client: &Client, url: &str) -> Option<LinkPrevie
         .send()
         .await
         .ok()?;
-    
+
     let html = response.text().await.ok()?;
     parse_open_graph(&html)
 }
@@ -23,33 +23,33 @@ pub async fn fetch_link_preview(client: &Client, url: &str) -> Option<LinkPrevie
 /// Parse Open Graph metadata from HTML
 fn parse_open_graph(html: &str) -> Option<LinkPreview> {
     let mut preview = LinkPreview::default();
-    
+
     // Extract og:title
-    preview.title = extract_meta_content(html, "og:title")
-        .or_else(|| extract_tag_content(html, "title"));
-    
+    preview.title =
+        extract_meta_content(html, "og:title").or_else(|| extract_tag_content(html, "title"));
+
     // Extract og:description
     preview.description = extract_meta_content(html, "og:description")
         .or_else(|| extract_meta_content(html, "description"));
-    
+
     // Extract og:image
     preview.image_url = extract_meta_content(html, "og:image");
-    
+
     // Extract og:site_name
     preview.site_name = extract_meta_content(html, "og:site_name");
-    
+
     // Extract og:type
     preview.content_type = extract_meta_content(html, "og:type");
-    
+
     // Estimate reading time from content length
     let word_count = html.split_whitespace().count();
     if word_count > 100 {
         preview.reading_time = Some((word_count / 200).max(1) as u32);
     }
-    
+
     // Extract content snippet from first paragraph
     preview.content_snippet = extract_first_paragraph(html);
-    
+
     if preview.title.is_some() || preview.description.is_some() {
         Some(preview)
     } else {
@@ -62,7 +62,7 @@ fn extract_meta_content(html: &str, property: &str) -> Option<String> {
     // Look for <meta property="og:..." content="...">
     let pattern1 = format!(r#"property="{}""#, property);
     let pattern2 = format!(r#"name="{}""#, property);
-    
+
     for pattern in [pattern1, pattern2] {
         if let Some(pos) = html.find(&pattern) {
             let chunk = &html[pos..];
@@ -84,7 +84,7 @@ fn extract_meta_content(html: &str, property: &str) -> Option<String> {
 fn extract_tag_content(html: &str, tag: &str) -> Option<String> {
     let start_tag = format!("<{}", tag);
     let end_tag = format!("</{}>", tag);
-    
+
     if let Some(start) = html.find(&start_tag) {
         let after_start = &html[start..];
         if let Some(close_bracket) = after_start.find('>') {

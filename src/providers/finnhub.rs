@@ -41,7 +41,7 @@ impl NewsCategory {
             NewsCategory::Merger => "merger",
         }
     }
-    
+
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "forex" => NewsCategory::Forex,
@@ -67,37 +67,45 @@ impl FinnhubProvider {
             .timeout(Duration::from_secs(30))
             .build()
             .map_err(|e| ProviderError::Other(e.to_string()))?;
-        
+
         Ok(Self {
             client,
             api_key,
             base_url: "https://finnhub.io/api/v1".to_string(),
-            category: category.map(|c| NewsCategory::from_str(&c)).unwrap_or_default(),
+            category: category
+                .map(|c| NewsCategory::from_str(&c))
+                .unwrap_or_default(),
         })
     }
-    
+
     /// Convert Finnhub news item to FeedItem (raw, no filtering)
     fn convert_to_feed_item(&self, item: FinnhubNewsItem) -> FeedItem {
-        let published_at = Utc.timestamp_opt(item.datetime, 0)
+        let published_at = Utc
+            .timestamp_opt(item.datetime, 0)
             .single()
             .unwrap_or_else(Utc::now);
-        
+
         // Extract related symbols as tags (raw, no filtering)
         let tags: Vec<String> = if item.related.is_empty() {
             vec![item.category.clone()]
         } else {
-            item.related.split(',')
+            item.related
+                .split(',')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect()
         };
-        
+
         let metadata = FeedItemMetadata {
             tags,
-            image_url: if item.image.is_empty() { None } else { Some(item.image) },
+            image_url: if item.image.is_empty() {
+                None
+            } else {
+                Some(item.image)
+            },
             ..Default::default()
         };
-        
+
         FeedItem::new(
             item.id.to_string(),
             self.id().to_string(),
@@ -116,19 +124,19 @@ impl FeedProvider for FinnhubProvider {
     fn id(&self) -> &str {
         "finnhub"
     }
-    
+
     fn name(&self) -> &str {
         "Finnhub"
     }
-    
+
     fn description(&self) -> &str {
         "Real-time financial news from markets worldwide"
     }
-    
+
     fn icon(&self) -> &str {
         "[FH]"
     }
-    
+
     fn status(&self) -> ProviderStatus {
         if self.api_key.is_empty() {
             ProviderStatus::NeedsConfig
@@ -136,70 +144,83 @@ impl FeedProvider for FinnhubProvider {
             ProviderStatus::Ready
         }
     }
-    
+
     fn categories(&self) -> Vec<&str> {
         vec!["general", "forex", "crypto", "merger"]
     }
-    
+
     async fn fetch_items(&self, limit: usize) -> Result<Vec<FeedItem>> {
         if self.api_key.is_empty() {
-            return Err(ProviderError::NotConfigured("Finnhub API key not set".to_string()));
+            return Err(ProviderError::NotConfigured(
+                "Finnhub API key not set".to_string(),
+            ));
         }
-        
+
         let url = format!(
             "{}/news?category={}&token={}",
             self.base_url,
             self.category.as_str(),
             self.api_key
         );
-        
+
         let response = self.client.get(&url).send().await?;
-        
+
         if response.status() == reqwest::StatusCode::UNAUTHORIZED {
             return Err(ProviderError::Auth("Invalid API key".to_string()));
         }
-        
+
         if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
             return Err(ProviderError::RateLimit);
         }
-        
-        let items: Vec<FinnhubNewsItem> = response.json().await
+
+        let items: Vec<FinnhubNewsItem> = response
+            .json()
+            .await
             .map_err(|e| ProviderError::Parse(e.to_string()))?;
-        
+
         let feed_items: Vec<FeedItem> = items
             .into_iter()
             .take(limit)
             .map(|item| self.convert_to_feed_item(item))
             .collect();
-        
+
         Ok(feed_items)
     }
-    
+
     fn supports_search(&self) -> bool {
-        false  // Finnhub free tier doesn't have search
+        false // Finnhub free tier doesn't have search
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_provider_status_no_key() {
         let provider = FinnhubProvider::new("".to_string(), None).unwrap();
         assert_eq!(provider.status(), ProviderStatus::NeedsConfig);
     }
-    
+
     #[test]
     fn test_provider_status_with_key() {
         let provider = FinnhubProvider::new("test_key".to_string(), None).unwrap();
         assert_eq!(provider.status(), ProviderStatus::Ready);
     }
-    
+
     #[test]
     fn test_category_parsing() {
-        assert!(matches!(NewsCategory::from_str("general"), NewsCategory::General));
-        assert!(matches!(NewsCategory::from_str("crypto"), NewsCategory::Crypto));
-        assert!(matches!(NewsCategory::from_str("unknown"), NewsCategory::General));
+        assert!(matches!(
+            NewsCategory::from_str("general"),
+            NewsCategory::General
+        ));
+        assert!(matches!(
+            NewsCategory::from_str("crypto"),
+            NewsCategory::Crypto
+        ));
+        assert!(matches!(
+            NewsCategory::from_str("unknown"),
+            NewsCategory::General
+        ));
     }
 }

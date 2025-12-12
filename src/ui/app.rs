@@ -1,14 +1,17 @@
 //! Application module
-//! 
+//!
 //! Main application state and event handling with provider-based architecture
 
 use crate::cache::CacheManager;
 use crate::config::Config;
-use crate::models::FeedItem;
-use crate::providers::{FinnhubProvider, HackerNewsProvider, CratesIoProvider, RedditProvider, ArxivProvider, ProviderRegistry};
 use crate::models::Comment;
-use crate::utils::Action;
+use crate::models::FeedItem;
+use crate::providers::{
+    ArxivProvider, CratesIoProvider, FinnhubProvider, HackerNewsProvider, ProviderRegistry,
+    RedditProvider,
+};
 use crate::ui::views;
+use crate::utils::Action;
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
 use ratatui::backend::Backend;
 use ratatui::Terminal;
@@ -20,10 +23,10 @@ use thiserror::Error;
 pub enum AppError {
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
-    
+
     #[error("Configuration error: {0}")]
     Config(String),
-    
+
     #[error("Provider error: {0}")]
     Provider(String),
 }
@@ -38,7 +41,7 @@ pub enum AppState {
     /// Dashboard with all feeds
     Dashboard,
     /// Single feed view
-    Feed(String),  // provider_id
+    Feed(String), // provider_id
     /// Article/item detail view
     Article,
     /// Comments view for current item
@@ -52,25 +55,25 @@ pub struct App {
     pub config: Config,
     pub state: AppState,
     pub should_quit: bool,
-    
+
     // Provider system
     pub registry: ProviderRegistry,
     pub cache: CacheManager,
-    
+
     // Data
     pub items: Vec<FeedItem>,
     pub selected_idx: usize,
     pub current_item: Option<FeedItem>,
-    
+
     // Landing page state
     pub landing_selected: usize,
-    
+
     // Comments state
     pub comments: Vec<Comment>,
     pub comments_selected: usize,
     pub comments_scroll: usize,
     pub comments_loading: bool,
-    
+
     // UI state
     pub scroll_offset: usize,
     pub status_message: Option<String>,
@@ -83,22 +86,22 @@ impl App {
     pub fn new(config: Config) -> Result<Self> {
         // Create provider registry
         let mut registry = ProviderRegistry::new();
-        
+
         // Register HackerNews provider first (most used)
         if let Ok(hn) = HackerNewsProvider::new(None) {
             registry.register(hn);
         }
-        
+
         // Register arXiv provider (research papers)
         if let Ok(arxiv) = ArxivProvider::new(Some("cs.ai".to_string())) {
             registry.register(arxiv);
         }
-        
+
         // Register Crates.io provider
         if let Ok(cratesio) = CratesIoProvider::new(None) {
             registry.register(cratesio);
         }
-        
+
         // Register Reddit provider
         if config.reddit.enabled {
             if let Ok(reddit) = RedditProvider::new(
@@ -109,7 +112,7 @@ impl App {
                 registry.register(reddit);
             }
         }
-        
+
         // Register Finnhub provider (last - requires API key)
         if let Ok(finnhub) = FinnhubProvider::new(
             config.finnhub.api_key.clone(),
@@ -117,15 +120,15 @@ impl App {
         ) {
             registry.register(finnhub);
         }
-        
+
         // Create cache
         let cache_dir = config.cache_dir();
         let cache = CacheManager::new(cache_dir, config.cache.max_size_mb)
             .map_err(|e| AppError::Config(e.to_string()))?;
-        
+
         Ok(Self {
             config,
-            state: AppState::Landing,  // Start at landing page
+            state: AppState::Landing, // Start at landing page
             should_quit: false,
             registry,
             cache,
@@ -143,39 +146,40 @@ impl App {
             loading: false,
         })
     }
-    
+
     /// Run the application main loop
     pub async fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
         loop {
             // Render
             terminal.draw(|f| self.render(f))?;
-            
+
             // Load comments if needed
-            if self.state == AppState::Comments && self.comments_loading && self.comments.is_empty() {
+            if self.state == AppState::Comments && self.comments_loading && self.comments.is_empty()
+            {
                 self.load_comments_for_current_item().await?;
             }
-            
+
             // Handle input with timeout
             if event::poll(Duration::from_millis(100))? {
                 if let Event::Key(key) = event::read()? {
                     self.handle_key_event(key).await?;
                 }
             }
-            
+
             if self.should_quit {
                 break;
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Handle keyboard events
     async fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
         use crate::utils::map_key_event;
-        
+
         let action = map_key_event(key, self.config.ui.vim_mode);
-        
+
         match &self.state {
             AppState::Landing => self.handle_landing_input(key, action).await?,
             AppState::Dashboard | AppState::Feed(_) => self.handle_feed_input(key, action).await?,
@@ -183,14 +187,14 @@ impl App {
             AppState::Comments => self.handle_comments_input(action),
             AppState::Help => self.handle_help_input(action),
         }
-        
+
         Ok(())
     }
-    
+
     /// Handle landing page input
     async fn handle_landing_input(&mut self, key: KeyEvent, action: Action) -> Result<()> {
         let provider_count = self.registry.len();
-        
+
         match action {
             Action::Quit => self.should_quit = true,
             Action::Help => self.state = AppState::Help,
@@ -200,7 +204,8 @@ impl App {
                 }
             }
             Action::NavigateDown => {
-                if self.landing_selected < provider_count {  // +1 for "All" option
+                if self.landing_selected < provider_count {
+                    // +1 for "All" option
                     self.landing_selected += 1;
                 }
             }
@@ -218,16 +223,16 @@ impl App {
                     }
                     // 'A' or 'a' for All
                     if c == 'a' || c == 'A' {
-                        self.landing_selected = provider_count;  // Select "All"
+                        self.landing_selected = provider_count; // Select "All"
                         self.select_from_landing().await?;
                     }
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Handle feed list input
     async fn handle_feed_input(&mut self, _key: KeyEvent, action: Action) -> Result<()> {
         match action {
@@ -278,10 +283,10 @@ impl App {
             }
             _ => {}
         }
-        
+
         Ok(())
     }
-    
+
     /// Handle article view input
     fn handle_article_input(&mut self, action: Action) {
         match action {
@@ -290,10 +295,8 @@ impl App {
                 // Go back to feed list
                 if self.state == AppState::Article {
                     // Determine what state to return to
-                    let provider_id = self.current_item
-                        .as_ref()
-                        .map(|i| i.provider_id.clone());
-                    
+                    let provider_id = self.current_item.as_ref().map(|i| i.provider_id.clone());
+
                     if let Some(id) = provider_id {
                         self.state = AppState::Feed(id);
                     } else {
@@ -346,11 +349,11 @@ impl App {
             _ => {}
         }
     }
-    
+
     /// Handle comments view input
     fn handle_comments_input(&mut self, action: Action) {
         let comment_count = self.comments.len();
-        
+
         match action {
             Action::Quit => self.should_quit = true,
             Action::Back => {
@@ -380,7 +383,7 @@ impl App {
             _ => {}
         }
     }
-    
+
     /// Handle help view input
     fn handle_help_input(&mut self, action: Action) {
         match action {
@@ -391,11 +394,11 @@ impl App {
             _ => {}
         }
     }
-    
+
     /// Select a provider from landing page
     async fn select_from_landing(&mut self) -> Result<()> {
         let provider_count = self.registry.len();
-        
+
         if self.landing_selected >= provider_count {
             // "All" selected - go to dashboard
             self.state = AppState::Dashboard;
@@ -409,47 +412,54 @@ impl App {
                 self.fetch_provider_items(&id).await?;
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Fetch items from all providers
     async fn fetch_all_items(&mut self) -> Result<()> {
         self.loading = true;
         self.status_message = Some("Loading...".to_string());
-        
+
         let limit = self.config.finnhub.max_articles.max(100);
         self.items = self.registry.fetch_all(limit).await;
         self.selected_idx = 0;
-        
+
         self.loading = false;
         self.status_message = Some(format!("Loaded {} items", self.items.len()));
         self.last_update = Instant::now();
-        
+
         Ok(())
     }
-    
+
     /// Load more items for infinite scroll
     async fn load_more_items(&mut self) -> Result<()> {
         if self.loading {
             return Ok(());
         }
-        
+
         self.loading = true;
         self.status_message = Some("Loading more...".to_string());
-        
+
         let current_count = self.items.len();
         let batch_size = 50;
-        
+
         if let AppState::Feed(provider_id) = &self.state.clone() {
             if let Some(provider) = self.registry.get(provider_id) {
                 if provider.supports_offset() {
-                    match provider.fetch_items_with_offset(current_count, batch_size).await {
+                    match provider
+                        .fetch_items_with_offset(current_count, batch_size)
+                        .await
+                    {
                         Ok(new_items) => {
                             let new_count = new_items.len();
                             if new_count > 0 {
                                 self.items.extend(new_items);
-                                self.status_message = Some(format!("Loaded {} more ({} total)", new_count, self.items.len()));
+                                self.status_message = Some(format!(
+                                    "Loaded {} more ({} total)",
+                                    new_count,
+                                    self.items.len()
+                                ));
                             } else {
                                 self.status_message = Some("End of feed".to_string());
                             }
@@ -463,18 +473,18 @@ impl App {
                 }
             }
         }
-        
+
         self.loading = false;
         Ok(())
     }
-    
+
     /// Fetch items from a specific provider
     async fn fetch_provider_items(&mut self, provider_id: &str) -> Result<()> {
         self.loading = true;
         self.status_message = Some("Loading...".to_string());
-        
+
         let limit = self.config.finnhub.max_articles.max(100);
-        
+
         match self.registry.fetch_from(provider_id, limit).await {
             Ok(items) => {
                 self.items = items;
@@ -485,13 +495,13 @@ impl App {
                 self.status_message = Some(format!("Error: {}", e));
             }
         }
-        
+
         self.loading = false;
         self.last_update = Instant::now();
-        
+
         Ok(())
     }
-    
+
     /// Refresh current feed
     async fn refresh_current_feed(&mut self) -> Result<()> {
         match &self.state {
@@ -506,19 +516,19 @@ impl App {
         }
         Ok(())
     }
-    
+
     /// Load comments for the current item
     pub async fn load_comments_for_current_item(&mut self) -> Result<()> {
         let item = match &self.current_item {
             Some(item) => item.clone(),
             None => return Ok(()),
         };
-        
+
         self.comments_loading = true;
         self.comments.clear();
-        
+
         let provider_id = item.provider_id.as_str();
-        
+
         match provider_id {
             "hackernews" => {
                 if let Some(hn_id) = item.metadata.hn_id {
@@ -526,28 +536,33 @@ impl App {
                         match hn.fetch_comments(hn_id, 3).await {
                             Ok(comments) => {
                                 self.comments = comments;
-                                self.status_message = Some(format!("Loaded {} comments", self.comments.len()));
+                                self.status_message =
+                                    Some(format!("Loaded {} comments", self.comments.len()));
                             }
                             Err(e) => {
-                                self.status_message = Some(format!("Error loading comments: {}", e));
+                                self.status_message =
+                                    Some(format!("Error loading comments: {}", e));
                             }
                         }
                     }
                 }
             }
             "reddit" => {
-                if let (Some(subreddit), Some(post_id)) = 
-                    (item.metadata.subreddit.as_ref(), item.metadata.reddit_id.as_ref()) 
-                {
+                if let (Some(subreddit), Some(post_id)) = (
+                    item.metadata.subreddit.as_ref(),
+                    item.metadata.reddit_id.as_ref(),
+                ) {
                     // Create a new Reddit provider instance for comment fetching
                     if let Ok(reddit) = RedditProvider::new(vec![], None, true) {
                         match reddit.fetch_comments(subreddit, post_id, 3).await {
                             Ok(comments) => {
                                 self.comments = comments;
-                                self.status_message = Some(format!("Loaded {} comments", self.comments.len()));
+                                self.status_message =
+                                    Some(format!("Loaded {} comments", self.comments.len()));
                             }
                             Err(e) => {
-                                self.status_message = Some(format!("Error loading comments: {}", e));
+                                self.status_message =
+                                    Some(format!("Error loading comments: {}", e));
                             }
                         }
                     }
@@ -557,11 +572,11 @@ impl App {
                 self.status_message = Some("Comments not available for this source".to_string());
             }
         }
-        
+
         self.comments_loading = false;
         Ok(())
     }
-    
+
     /// Render the UI based on current state
     fn render(&mut self, f: &mut ratatui::Frame) {
         use crate::ui::ProviderColors;
@@ -574,7 +589,7 @@ impl App {
                     f,
                     "All Sources",
                     "A",
-                    ProviderColors::hackernews(),  // Default accent
+                    ProviderColors::hackernews(), // Default accent
                     &self.items,
                     self.selected_idx,
                     self.status_message.as_deref(),
@@ -582,12 +597,14 @@ impl App {
                 );
             }
             AppState::Feed(provider_id) => {
-                let (name, icon) = self.registry.get(provider_id)
+                let (name, icon) = self
+                    .registry
+                    .get(provider_id)
                     .map(|p| (p.name().to_string(), p.icon().to_string()))
                     .unwrap_or(("Unknown".to_string(), "?".to_string()));
-                
+
                 let provider_color = ProviderColors::for_provider(provider_id);
-                
+
                 views::dashboard::render(
                     f,
                     &name,
@@ -605,7 +622,8 @@ impl App {
                 }
             }
             AppState::Comments => {
-                let provider_name = self.current_item
+                let provider_name = self
+                    .current_item
                     .as_ref()
                     .map(|i| i.source.clone())
                     .unwrap_or_else(|| "Comments".to_string());

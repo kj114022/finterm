@@ -18,14 +18,14 @@ impl<T> CacheEntry<T> {
             ttl_seconds,
         }
     }
-    
+
     /// Check if the cache entry is still valid
     pub fn is_valid(&self) -> bool {
         let now = Utc::now();
         let age = now.signed_duration_since(self.cached_at);
         age.num_seconds() < self.ttl_seconds as i64
     }
-    
+
     /// Get remaining TTL in seconds
     pub fn remaining_ttl(&self) -> i64 {
         let now = Utc::now();
@@ -41,7 +41,7 @@ pub enum CacheKey {
     AletheiaSearch(String),
     HnStory(u64),
     HnComments(u64),
-    HnContent(String), // URL hash
+    HnContent(String),   // URL hash
     HnStoryList(String), // Category name
 }
 
@@ -63,7 +63,7 @@ impl CacheKey {
             CacheKey::HnStoryList(category) => format!("hn:list:{}", category),
         }
     }
-    
+
     /// Hash a string to create a stable key
     fn hash_string(s: &str) -> String {
         use sha2::{Digest, Sha256};

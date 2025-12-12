@@ -1,6 +1,6 @@
 //! Hacker News provider
 
-use crate::models::{FeedItem, FeedItemMetadata, Comment};
+use crate::models::{Comment, FeedItem, FeedItemMetadata};
 use crate::providers::{FeedProvider, ProviderError, ProviderStatus, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -34,7 +34,7 @@ impl HnCategory {
             HnCategory::Job => "jobstories",
         }
     }
-    
+
     pub fn as_str(&self) -> &str {
         match self {
             HnCategory::Top => "Top",
@@ -45,7 +45,7 @@ impl HnCategory {
             HnCategory::Job => "Jobs",
         }
     }
-    
+
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "new" => HnCategory::New,
@@ -93,15 +93,17 @@ impl HackerNewsProvider {
             .timeout(Duration::from_secs(30))
             .build()
             .map_err(|e| ProviderError::Other(e.to_string()))?;
-        
+
         Ok(Self {
             client,
-            category: category.map(|c| HnCategory::from_str(&c)).unwrap_or_default(),
+            category: category
+                .map(|c| HnCategory::from_str(&c))
+                .unwrap_or_default(),
             enabled: true,
             cached_ids: std::sync::Mutex::new(Vec::new()),
         })
     }
-    
+
     /// Set the current category
     pub fn set_category(&mut self, category: HnCategory) {
         self.category = category;
@@ -110,77 +112,74 @@ impl HackerNewsProvider {
             ids.clear();
         }
     }
-    
+
     /// Fetch story IDs for current category
     async fn fetch_story_ids(&self, limit: usize) -> Result<Vec<u64>> {
         let url = format!("{}/{}.json", HN_API_BASE, self.category.endpoint());
-        
-        let ids: Vec<u64> = self.client
+
+        let ids: Vec<u64> = self
+            .client
             .get(&url)
             .send()
             .await?
             .json()
             .await
             .map_err(|e| ProviderError::Parse(e.to_string()))?;
-        
+
         // Cache the IDs for infinite scroll
         if let Ok(mut cached) = self.cached_ids.lock() {
             *cached = ids.clone();
         }
-        
+
         Ok(ids.into_iter().take(limit).collect())
     }
-    
+
     /// Fetch items with offset for infinite scroll
     pub async fn fetch_offset_items(&self, offset: usize, limit: usize) -> Result<Vec<FeedItem>> {
         // Fetch all story IDs
         let ids = self.fetch_all_story_ids().await?;
-        
+
         // Get slice with offset
-        let slice: Vec<u64> = ids.into_iter()
-            .skip(offset)
-            .take(limit)
-            .collect();
-        
+        let slice: Vec<u64> = ids.into_iter().skip(offset).take(limit).collect();
+
         if slice.is_empty() {
             return Ok(vec![]);
         }
-        
+
         self.fetch_items_by_ids(&slice).await
     }
-    
+
     /// Fetch all story IDs without limit (for caching)
     async fn fetch_all_story_ids(&self) -> Result<Vec<u64>> {
         let url = format!("{}/{}.json", HN_API_BASE, self.category.endpoint());
-        
-        let ids: Vec<u64> = self.client
+
+        let ids: Vec<u64> = self
+            .client
             .get(&url)
             .send()
             .await?
             .json()
             .await
             .map_err(|e| ProviderError::Parse(e.to_string()))?;
-        
+
         // Cache the IDs
         if let Ok(mut cached) = self.cached_ids.lock() {
             *cached = ids.clone();
         }
-        
+
         Ok(ids)
     }
-    
+
     /// Fetch items by IDs (parallel)
     async fn fetch_items_by_ids(&self, ids: &[u64]) -> Result<Vec<FeedItem>> {
-        let batch_size = 25;  // Increased from 10 for faster fetching
+        let batch_size = 25; // Increased from 10 for faster fetching
         let mut all_items = Vec::with_capacity(ids.len());
-        
+
         for chunk in ids.chunks(batch_size) {
-            let futures: Vec<_> = chunk.iter()
-                .map(|&id| self.fetch_item(id))
-                .collect();
-            
+            let futures: Vec<_> = chunk.iter().map(|&id| self.fetch_item(id)).collect();
+
             let results = join_all(futures).await;
-            
+
             for item in results.into_iter().flatten() {
                 if item.deleted.unwrap_or(false) || item.dead.unwrap_or(false) {
                     continue;
@@ -188,14 +187,14 @@ impl HackerNewsProvider {
                 all_items.push(self.convert_to_feed_item(item));
             }
         }
-        
+
         Ok(all_items)
     }
 
     /// Fetch a single item by ID
     async fn fetch_item(&self, id: u64) -> Result<HnItem> {
         let url = format!("{}/item/{}.json", HN_API_BASE, id);
-        
+
         self.client
             .get(&url)
             .send()
@@ -205,26 +204,25 @@ impl HackerNewsProvider {
             .map_err(|e| ProviderError::Parse(e.to_string()))?
             .ok_or(ProviderError::Other(format!("Item {} not found", id)))
     }
-    
+
     /// Convert HnItem to FeedItem
     fn convert_to_feed_item(&self, item: HnItem) -> FeedItem {
-        let published_at = DateTime::from_timestamp(item.time, 0)
-            .unwrap_or_else(Utc::now);
-        
+        let published_at = DateTime::from_timestamp(item.time, 0).unwrap_or_else(Utc::now);
+
         let source = match self.category {
             HnCategory::Ask => "Ask HN",
             HnCategory::Show => "Show HN",
             HnCategory::Job => "HN Jobs",
             _ => "Hacker News",
         };
-        
+
         let metadata = FeedItemMetadata {
             score: item.score,
             comments: item.descendants,
-            hn_id: Some(item.id),  // Store HN ID for fetching comments
+            hn_id: Some(item.id), // Store HN ID for fetching comments
             ..Default::default()
         };
-        
+
         let mut feed_item = FeedItem::new(
             item.id.to_string(),
             self.id().to_string(),
@@ -233,93 +231,89 @@ impl HackerNewsProvider {
             published_at,
         )
         .with_metadata(metadata);
-        
+
         if let Some(author) = item.by {
             feed_item = feed_item.with_author(author);
         }
-        
+
         if let Some(url) = item.url {
             feed_item = feed_item.with_url(url);
         }
-        
+
         if let Some(text) = item.text {
             // Convert HTML to plain text
             let plain_text = html2text::from_read(text.as_bytes(), 80);
             feed_item = feed_item.with_summary(plain_text);
         }
-        
+
         feed_item
     }
-    
+
     /// Fetch comments for a story by ID
     pub async fn fetch_comments(&self, story_id: u64, max_depth: u32) -> Result<Vec<Comment>> {
         let item = self.fetch_item(story_id).await?;
-        
+
         let comment_ids = item.kids.unwrap_or_default();
         if comment_ids.is_empty() {
             return Ok(vec![]);
         }
-        
+
         // Fetch top-level comments in parallel
         let futures: Vec<_> = comment_ids
             .into_iter()
-            .take(20)  // Limit to 20 top-level comments
+            .take(20) // Limit to 20 top-level comments
             .map(|id| self.fetch_comment_tree(id, 0, max_depth))
             .collect();
-        
+
         let results = join_all(futures).await;
-        
-        let comments: Vec<Comment> = results
-            .into_iter()
-            .flatten()
-            .collect();
-        
+
+        let comments: Vec<Comment> = results.into_iter().flatten().collect();
+
         Ok(comments)
     }
-    
+
     /// Recursively fetch a comment and its replies
-    async fn fetch_comment_tree(&self, comment_id: u64, depth: u32, max_depth: u32) -> Option<Comment> {
+    async fn fetch_comment_tree(
+        &self,
+        comment_id: u64,
+        depth: u32,
+        max_depth: u32,
+    ) -> Option<Comment> {
         if depth > max_depth {
             return None;
         }
-        
+
         let item = self.fetch_item(comment_id).await.ok()?;
-        
+
         // Skip deleted/dead comments
         if item.deleted.unwrap_or(false) || item.dead.unwrap_or(false) {
             return None;
         }
-        
+
         let author = item.by.unwrap_or_else(|| "[deleted]".to_string());
         let text = item.text.unwrap_or_default();
         let text_plain = html2text::from_read(text.as_bytes(), 80);
-        
-        let created_at = DateTime::from_timestamp(item.time, 0)
-            .unwrap_or_else(Utc::now);
-        
-        let mut comment = Comment::new(
-            comment_id.to_string(),
-            author,
-            text.clone(),
-            created_at,
-        );
+
+        let created_at = DateTime::from_timestamp(item.time, 0).unwrap_or_else(Utc::now);
+
+        let mut comment = Comment::new(comment_id.to_string(), author, text.clone(), created_at);
         comment.text_plain = Some(text_plain);
         comment.depth = depth;
-        
+
         // Fetch replies (limit depth for performance)
         if depth < max_depth {
             if let Some(kid_ids) = item.kids {
                 let futures: Vec<_> = kid_ids
                     .into_iter()
-                    .take(10)  // Limit replies per comment
+                    .take(10) // Limit replies per comment
                     .map(|id| self.fetch_comment_tree(id, depth + 1, max_depth))
                     .collect();
-                
+
                 let replies = join_all(futures).await;
                 comment.replies = replies.into_iter().flatten().collect();
             }
         }
-        
+
         Some(comment)
     }
 }
@@ -329,19 +323,19 @@ impl FeedProvider for HackerNewsProvider {
     fn id(&self) -> &str {
         "hackernews"
     }
-    
+
     fn name(&self) -> &str {
         "Hacker News"
     }
-    
+
     fn description(&self) -> &str {
         "Tech news and discussions from Y Combinator"
     }
-    
+
     fn icon(&self) -> &str {
         "[HN]"
     }
-    
+
     fn status(&self) -> ProviderStatus {
         if self.enabled {
             ProviderStatus::Ready
@@ -349,25 +343,23 @@ impl FeedProvider for HackerNewsProvider {
             ProviderStatus::Disabled
         }
     }
-    
+
     fn categories(&self) -> Vec<&str> {
         vec!["top", "new", "best", "ask", "show", "job"]
     }
-    
+
     async fn fetch_items(&self, limit: usize) -> Result<Vec<FeedItem>> {
         let ids = self.fetch_story_ids(limit).await?;
-        
+
         // Parallel fetch with batching (10 concurrent requests)
         let batch_size = 10;
         let mut all_items = Vec::with_capacity(ids.len());
-        
+
         for chunk in ids.chunks(batch_size) {
-            let futures: Vec<_> = chunk.iter()
-                .map(|&id| self.fetch_item(id))
-                .collect();
-            
+            let futures: Vec<_> = chunk.iter().map(|&id| self.fetch_item(id)).collect();
+
             let results = join_all(futures).await;
-            
+
             for result in results {
                 if let Ok(item) = result {
                     // Skip deleted/dead items
@@ -378,25 +370,25 @@ impl FeedProvider for HackerNewsProvider {
                 }
             }
         }
-        
+
         Ok(all_items)
     }
-    
+
     fn supports_search(&self) -> bool {
-        true  // HN search via Algolia
+        true // HN search via Algolia
     }
-    
+
     async fn search(&self, query: &str, limit: usize) -> Result<Vec<FeedItem>> {
         let url = format!(
             "https://hn.algolia.com/api/v1/search?query={}&tags=story&hitsPerPage={}",
             query, limit
         );
-        
+
         #[derive(Deserialize)]
         struct SearchResult {
             hits: Vec<AlgoliaHit>,
         }
-        
+
         #[derive(Deserialize)]
         struct AlgoliaHit {
             #[serde(rename = "objectID")]
@@ -408,30 +400,33 @@ impl FeedProvider for HackerNewsProvider {
             num_comments: Option<i32>,
             created_at_i: Option<i64>,
         }
-        
-        let response: SearchResult = self.client
+
+        let response: SearchResult = self
+            .client
             .get(&url)
             .send()
             .await?
             .json()
             .await
             .map_err(|e| ProviderError::Parse(e.to_string()))?;
-        
-        let items: Vec<FeedItem> = response.hits
+
+        let items: Vec<FeedItem> = response
+            .hits
             .into_iter()
             .filter_map(|hit| {
                 let title = hit.title?;
-                let published_at = hit.created_at_i
+                let published_at = hit
+                    .created_at_i
                     .and_then(|ts| DateTime::from_timestamp(ts, 0))
                     .unwrap_or_else(Utc::now);
-                
+
                 let metadata = FeedItemMetadata {
                     score: hit.points,
                     comments: hit.num_comments,
                     tags: vec!["hackernews".to_string()],
                     ..Default::default()
                 };
-                
+
                 let mut item = FeedItem::new(
                     hit.object_id.clone(),
                     self.id().to_string(),
@@ -440,26 +435,26 @@ impl FeedProvider for HackerNewsProvider {
                     published_at,
                 )
                 .with_metadata(metadata);
-                
+
                 if let Some(url) = hit.url {
                     item = item.with_url(url);
                 }
                 if let Some(author) = hit.author {
                     item = item.with_author(author);
                 }
-                
+
                 Some(item)
             })
             .take(limit)
             .collect();
-        
+
         Ok(items)
     }
-    
+
     fn supports_offset(&self) -> bool {
-        true  // HN supports infinite scroll
+        true // HN supports infinite scroll
     }
-    
+
     async fn fetch_items_with_offset(&self, offset: usize, limit: usize) -> Result<Vec<FeedItem>> {
         self.fetch_offset_items(offset, limit).await
     }
@@ -468,20 +463,20 @@ impl FeedProvider for HackerNewsProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_provider_ready() {
         let provider = HackerNewsProvider::new(None).unwrap();
         assert_eq!(provider.status(), ProviderStatus::Ready);
     }
-    
+
     #[test]
     fn test_category_parsing() {
         assert!(matches!(HnCategory::from_str("top"), HnCategory::Top));
         assert!(matches!(HnCategory::from_str("show"), HnCategory::Show));
         assert!(matches!(HnCategory::from_str("unknown"), HnCategory::Top));
     }
-    
+
     #[tokio::test]
     async fn test_fetch_story_ids() {
         let provider = HackerNewsProvider::new(None).unwrap();

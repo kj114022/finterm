@@ -17,7 +17,7 @@ const ARXIV_RSS_BASE: &str = "https://rss.arxiv.org/rss";
 #[derive(Debug, Clone, Default)]
 pub enum ArxivCategory {
     #[default]
-    CS,      // Computer Science (all)
+    CS, // Computer Science (all)
     CSAI,    // Artificial Intelligence
     CSLG,    // Machine Learning
     CSCL,    // Computation & Language (NLP)
@@ -42,7 +42,7 @@ impl ArxivCategory {
             ArxivCategory::Stat => "stat",
         }
     }
-    
+
     pub fn display_name(&self) -> &str {
         match self {
             ArxivCategory::CS => "Computer Science",
@@ -56,7 +56,7 @@ impl ArxivCategory {
             ArxivCategory::Stat => "Statistics",
         }
     }
-    
+
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "cs.ai" | "ai" => ArxivCategory::CSAI,
@@ -101,7 +101,9 @@ impl ArxivProvider {
 
         Ok(Self {
             client,
-            category: category.map(|c| ArxivCategory::from_str(&c)).unwrap_or_default(),
+            category: category
+                .map(|c| ArxivCategory::from_str(&c))
+                .unwrap_or_default(),
             enabled: true,
         })
     }
@@ -114,7 +116,7 @@ impl ArxivProvider {
     /// Fetch RSS feed
     async fn fetch_feed(&self) -> Result<String> {
         let url = format!("{}/{}", ARXIV_RSS_BASE, self.category.as_rss_path());
-        
+
         let response = self
             .client
             .get(&url)
@@ -192,21 +194,26 @@ impl ArxivProvider {
             .unwrap_or_else(|_| Utc::now());
 
         // Clean title (remove newlines/extra spaces)
-        let title = entry.title
+        let title = entry
+            .title
             .lines()
             .map(|l| l.trim())
             .collect::<Vec<_>>()
             .join(" ");
 
         // Extract arXiv ID from link
-        let arxiv_id = entry.link
+        let arxiv_id = entry
+            .link
             .split('/')
             .last()
             .unwrap_or("unknown")
             .to_string();
 
         let metadata = FeedItemMetadata {
-            tags: vec![self.category.display_name().to_string(), "paper".to_string()],
+            tags: vec![
+                self.category.display_name().to_string(),
+                "paper".to_string(),
+            ],
             ..Default::default()
         };
 
@@ -215,15 +222,9 @@ impl ArxivProvider {
         // Clean description (HTML to text)
         let summary = html2text::from_read(entry.description.as_bytes(), 200);
 
-        let mut item = FeedItem::new(
-            arxiv_id,
-            self.id().to_string(),
-            title,
-            source,
-            published_at,
-        )
-        .with_metadata(metadata)
-        .with_url(entry.link);
+        let mut item = FeedItem::new(arxiv_id, self.id().to_string(), title, source, published_at)
+            .with_metadata(metadata)
+            .with_url(entry.link);
 
         if !entry.creator.is_empty() {
             item = item.with_author(entry.creator);
@@ -264,7 +265,9 @@ impl FeedProvider for ArxivProvider {
     }
 
     fn categories(&self) -> Vec<&str> {
-        vec!["cs", "cs.ai", "cs.lg", "cs.cl", "cs.cv", "math", "physics", "stat"]
+        vec![
+            "cs", "cs.ai", "cs.lg", "cs.cl", "cs.cv", "math", "physics", "stat",
+        ]
     }
 
     async fn fetch_items(&self, limit: usize) -> Result<Vec<FeedItem>> {
@@ -299,9 +302,15 @@ mod tests {
 
     #[test]
     fn test_category_parsing() {
-        assert!(matches!(ArxivCategory::from_str("cs.ai"), ArxivCategory::CSAI));
+        assert!(matches!(
+            ArxivCategory::from_str("cs.ai"),
+            ArxivCategory::CSAI
+        ));
         assert!(matches!(ArxivCategory::from_str("ml"), ArxivCategory::CSLG));
-        assert!(matches!(ArxivCategory::from_str("nlp"), ArxivCategory::CSCL));
+        assert!(matches!(
+            ArxivCategory::from_str("nlp"),
+            ArxivCategory::CSCL
+        ));
     }
 
     #[tokio::test]

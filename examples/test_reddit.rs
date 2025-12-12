@@ -5,19 +5,20 @@ use finterm::providers::{FeedProvider, RedditProvider};
 #[tokio::main]
 async fn main() {
     println!("Testing Reddit RSS Provider...\n");
-    
+
     // Create provider with default subreddits
     let provider = RedditProvider::new(
         vec!["rust".to_string(), "programming".to_string()],
         Some("hot".to_string()),
         true,
-    ).expect("Failed to create Reddit provider");
-    
+    )
+    .expect("Failed to create Reddit provider");
+
     println!("Provider: {} ({})", provider.name(), provider.id());
     println!("Status: {:?}", provider.status());
     println!("Categories: {:?}", provider.categories());
     println!("\nFetching 10 items...\n");
-    
+
     match provider.fetch_items(10).await {
         Ok(items) => {
             println!("Successfully fetched {} items:\n", items.len());

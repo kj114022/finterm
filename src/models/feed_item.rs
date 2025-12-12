@@ -114,12 +114,12 @@ impl Comment {
     pub fn total_count(&self) -> usize {
         1 + self.replies.iter().map(|r| r.total_count()).sum::<usize>()
     }
-    
+
     /// Get time ago string
     pub fn time_ago(&self) -> String {
         let now = Utc::now();
         let duration = now.signed_duration_since(self.created_at);
-        
+
         if duration.num_minutes() < 60 {
             format!("{}m", duration.num_minutes())
         } else if duration.num_hours() < 24 {
@@ -194,7 +194,7 @@ impl SentimentLabel {
             SentimentLabel::Neutral => "Neutral",
         }
     }
-    
+
     pub fn color(&self) -> &str {
         match self {
             SentimentLabel::Positive => "green",
@@ -226,42 +226,42 @@ impl FeedItem {
             metadata: FeedItemMetadata::default(),
         }
     }
-    
+
     /// Builder method: set summary
     pub fn with_summary(mut self, summary: String) -> Self {
         self.summary = Some(summary);
         self
     }
-    
+
     /// Builder method: set URL
     pub fn with_url(mut self, url: String) -> Self {
         self.url = Some(url);
         self
     }
-    
+
     /// Builder method: set author
     pub fn with_author(mut self, author: String) -> Self {
         self.author = Some(author);
         self
     }
-    
+
     /// Builder method: set content
     pub fn with_content(mut self, content: String) -> Self {
         self.content = Some(content);
         self
     }
-    
+
     /// Builder method: set metadata
     pub fn with_metadata(mut self, metadata: FeedItemMetadata) -> Self {
         self.metadata = metadata;
         self
     }
-    
+
     /// Get a display-friendly time string (e.g., "2 hours ago")
     pub fn time_ago(&self) -> String {
         let now = Utc::now();
         let duration = now.signed_duration_since(self.published_at);
-        
+
         if duration.num_seconds() < 60 {
             "just now".to_string()
         } else if duration.num_minutes() < 60 {
@@ -274,7 +274,7 @@ impl FeedItem {
             self.published_at.format("%Y-%m-%d").to_string()
         }
     }
-    
+
     /// Get sentiment color for UI
     pub fn sentiment_color(&self) -> &str {
         match &self.metadata.sentiment {
@@ -282,12 +282,12 @@ impl FeedItem {
             None => "white",
         }
     }
-    
+
     /// Get display string with score if available
     pub fn score_display(&self) -> Option<String> {
         self.metadata.score.map(|s| format!("▲{}", s))
     }
-    
+
     /// Get comments display if available
     pub fn comments_display(&self) -> Option<String> {
         self.metadata.comments.map(|c| format!("💬{}", c))
@@ -297,7 +297,7 @@ impl FeedItem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_feed_item_builder() {
         let item = FeedItem::new(
@@ -309,7 +309,7 @@ mod tests {
         )
         .with_summary("Test summary".to_string())
         .with_url("https://example.com".to_string());
-        
+
         assert_eq!(item.title, "Test Title");
         assert_eq!(item.summary, Some("Test summary".to_string()));
         assert_eq!(item.url, Some("https://example.com".to_string()));

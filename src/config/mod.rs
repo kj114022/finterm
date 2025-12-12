@@ -7,10 +7,10 @@ use thiserror::Error;
 pub enum ConfigError {
     #[error("Failed to read config file: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Failed to parse config: {0}")]
     Parse(#[from] toml::de::Error),
-    
+
     #[error("Config validation error: {0}")]
     Validation(String),
 }
@@ -18,24 +18,23 @@ pub enum ConfigError {
 pub type Result<T> = std::result::Result<T, ConfigError>;
 
 /// Main configuration structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub finnhub: FinnhubConfig,
-    
+
     #[serde(default)]
     pub hackernews: HackerNewsConfig,
-    
+
     #[serde(default)]
     pub reddit: RedditConfig,
-    
+
     #[serde(default)]
     pub ui: UiConfig,
-    
+
     #[serde(default)]
     pub cache: CacheConfig,
-    
+
     #[serde(default)]
     pub keybindings: KeybindingsConfig,
 }
@@ -133,11 +132,21 @@ fn default_max_stories() -> usize {
 }
 
 fn default_categories() -> Vec<String> {
-    vec!["top".to_string(), "new".to_string(), "show".to_string(), "ask".to_string()]
+    vec![
+        "top".to_string(),
+        "new".to_string(),
+        "show".to_string(),
+        "ask".to_string(),
+    ]
 }
 
 fn default_subreddits() -> Vec<String> {
-    vec!["technology".to_string(), "programming".to_string(), "rust".to_string(), "finance".to_string()]
+    vec![
+        "technology".to_string(),
+        "programming".to_string(),
+        "rust".to_string(),
+        "finance".to_string(),
+    ]
 }
 
 fn default_reddit_sort() -> String {
@@ -246,7 +255,6 @@ impl Default for KeybindingsConfig {
     }
 }
 
-
 impl Config {
     /// Load configuration from file
     pub fn load(path: &PathBuf) -> Result<Self> {
@@ -255,34 +263,34 @@ impl Config {
         config.validate()?;
         Ok(config)
     }
-    
+
     /// Save configuration to file
     pub fn save(&self, path: &PathBuf) -> Result<()> {
-        let contents = toml::to_string_pretty(self)
-            .map_err(|e| ConfigError::Validation(e.to_string()))?;
-        
+        let contents =
+            toml::to_string_pretty(self).map_err(|e| ConfigError::Validation(e.to_string()))?;
+
         // Create parent directories if they don't exist
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-        
+
         fs::write(path, contents)?;
         Ok(())
     }
-    
+
     /// Validate configuration
     fn validate(&self) -> Result<()> {
         // API key is optional - if not set, Finnhub will be skipped (demo mode)
-        
+
         if self.cache.max_size_mb == 0 {
             return Err(ConfigError::Validation(
                 "Cache max size must be greater than 0".to_string(),
             ));
         }
-        
+
         Ok(())
     }
-    
+
     /// Get default config file path
     pub fn default_path() -> PathBuf {
         dirs::config_dir()
@@ -290,7 +298,7 @@ impl Config {
             .join("finterm")
             .join("config.toml")
     }
-    
+
     /// Get cache directory
     pub fn cache_dir(&self) -> PathBuf {
         if let Some(path) = &self.cache.path {
@@ -301,7 +309,7 @@ impl Config {
                 .join("finterm")
         }
     }
-    
+
     /// Create example configuration file
     pub fn create_example() -> String {
         toml::to_string_pretty(&Config::default()).unwrap()

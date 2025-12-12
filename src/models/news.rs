@@ -20,9 +20,9 @@ pub struct NewsArticle {
 /// Sentiment analysis for an article
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Sentiment {
-    pub score: f32,           // -1.0 (negative) to 1.0 (positive)
+    pub score: f32, // -1.0 (negative) to 1.0 (positive)
     pub label: SentimentLabel,
-    pub confidence: f32,       // 0.0 to 1.0
+    pub confidence: f32, // 0.0 to 1.0
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -68,7 +68,7 @@ impl NewsArticle {
     pub fn time_ago(&self) -> String {
         let now = Utc::now();
         let duration = now.signed_duration_since(self.published_at);
-        
+
         if duration.num_seconds() < 60 {
             "just now".to_string()
         } else if duration.num_minutes() < 60 {
@@ -81,7 +81,7 @@ impl NewsArticle {
             self.published_at.format("%Y-%m-%d").to_string()
         }
     }
-    
+
     /// Get sentiment color string for UI rendering
     pub fn sentiment_color(&self) -> &str {
         match &self.sentiment {

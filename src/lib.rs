@@ -7,5 +7,8 @@ pub mod utils;
 
 pub use cache::CacheManager;
 pub use config::Config;
-pub use providers::{FeedProvider, FinnhubProvider, HackerNewsProvider, CratesIoProvider, RedditProvider, ProviderRegistry};
+pub use providers::{
+    CratesIoProvider, FeedProvider, FinnhubProvider, HackerNewsProvider, ProviderRegistry,
+    RedditProvider,
+};
 pub use ui::App;
