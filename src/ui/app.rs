@@ -5,7 +5,7 @@
 use crate::cache::CacheManager;
 use crate::config::Config;
 use crate::models::FeedItem;
-use crate::providers::{FinnhubProvider, HackerNewsProvider, CratesIoProvider, RedditProvider, ProviderRegistry};
+use crate::providers::{FinnhubProvider, HackerNewsProvider, CratesIoProvider, RedditProvider, ArxivProvider, ProviderRegistry};
 use crate::models::Comment;
 use crate::utils::Action;
 use crate::ui::views;
@@ -87,6 +87,11 @@ impl App {
         // Register HackerNews provider first (most used)
         if let Ok(hn) = HackerNewsProvider::new(None) {
             registry.register(hn);
+        }
+        
+        // Register arXiv provider (research papers)
+        if let Ok(arxiv) = ArxivProvider::new(Some("cs.ai".to_string())) {
+            registry.register(arxiv);
         }
         
         // Register Crates.io provider

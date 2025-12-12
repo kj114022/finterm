@@ -7,6 +7,7 @@ pub mod finnhub;
 pub mod hackernews;
 pub mod cratesio;
 pub mod reddit;
+pub mod arxiv;
 pub mod link_preview;
 pub mod registry;
 
@@ -127,3 +128,4 @@ pub use finnhub::FinnhubProvider;
 pub use hackernews::HackerNewsProvider;
 pub use cratesio::CratesIoProvider;
 pub use reddit::RedditProvider;
+pub use arxiv::ArxivProvider;
