@@ -14,6 +14,7 @@ use ratatui::{
 };
 
 /// Render dashboard with split layout
+#[allow(clippy::too_many_arguments)]
 pub fn render(
     f: &mut Frame,
     provider_name: &str,

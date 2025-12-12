@@ -51,7 +51,7 @@ impl CacheManager {
 
     /// Get a cached value
     pub fn get<T: DeserializeOwned>(&mut self, key: CacheKey) -> Result<T> {
-        let key_str = key.to_string();
+        let key_str = key.as_cache_key();
 
         match self.db.get(&key_str)? {
             Some(bytes) => {
@@ -81,7 +81,7 @@ impl CacheManager {
         let bytes =
             serde_json::to_vec(&entry).map_err(|e| CacheError::Serialization(e.to_string()))?;
 
-        let key_str = key.to_string();
+        let key_str = key.as_cache_key();
         self.db.insert(&key_str, bytes)?;
 
         // Check cache size and evict if necessary
@@ -92,7 +92,7 @@ impl CacheManager {
 
     /// Remove a cache entry
     pub fn remove(&mut self, key: CacheKey) -> Result<()> {
-        let key_str = key.to_string();
+        let key_str = key.as_cache_key();
         self.db.remove(&key_str)?;
         Ok(())
     }

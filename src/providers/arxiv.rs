@@ -57,7 +57,7 @@ impl ArxivCategory {
         }
     }
 
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "cs.ai" | "ai" => ArxivCategory::CSAI,
             "cs.lg" | "lg" | "ml" | "machine learning" => ArxivCategory::CSLG,
@@ -102,7 +102,7 @@ impl ArxivProvider {
         Ok(Self {
             client,
             category: category
-                .map(|c| ArxivCategory::from_str(&c))
+                .map(|c| ArxivCategory::parse(&c))
                 .unwrap_or_default(),
             enabled: true,
         })
@@ -302,15 +302,9 @@ mod tests {
 
     #[test]
     fn test_category_parsing() {
-        assert!(matches!(
-            ArxivCategory::from_str("cs.ai"),
-            ArxivCategory::CSAI
-        ));
-        assert!(matches!(ArxivCategory::from_str("ml"), ArxivCategory::CSLG));
-        assert!(matches!(
-            ArxivCategory::from_str("nlp"),
-            ArxivCategory::CSCL
-        ));
+        assert!(matches!(ArxivCategory::parse("cs.ai"), ArxivCategory::CSAI));
+        assert!(matches!(ArxivCategory::parse("ml"), ArxivCategory::CSLG));
+        assert!(matches!(ArxivCategory::parse("nlp"), ArxivCategory::CSCL));
     }
 
     #[tokio::test]

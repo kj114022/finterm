@@ -33,7 +33,7 @@ impl CratesCategory {
         }
     }
 
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "updated" | "just_updated" | "justupdated" => CratesCategory::JustUpdated,
             "downloaded" | "most_downloaded" | "mostdownloaded" => CratesCategory::MostDownloaded,
@@ -81,7 +81,7 @@ impl CratesIoProvider {
         Ok(Self {
             client,
             category: category
-                .map(|c| CratesCategory::from_str(&c))
+                .map(|c| CratesCategory::parse(&c))
                 .unwrap_or_default(),
             enabled: true,
         })
@@ -285,16 +285,13 @@ mod tests {
 
     #[test]
     fn test_category_parsing() {
+        assert!(matches!(CratesCategory::parse("new"), CratesCategory::New));
         assert!(matches!(
-            CratesCategory::from_str("new"),
-            CratesCategory::New
-        ));
-        assert!(matches!(
-            CratesCategory::from_str("updated"),
+            CratesCategory::parse("updated"),
             CratesCategory::JustUpdated
         ));
         assert!(matches!(
-            CratesCategory::from_str("downloaded"),
+            CratesCategory::parse("downloaded"),
             CratesCategory::MostDownloaded
         ));
     }

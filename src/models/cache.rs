@@ -47,7 +47,7 @@ pub enum CacheKey {
 
 impl CacheKey {
     /// Convert cache key to string for storage
-    pub fn to_string(&self) -> String {
+    pub fn as_cache_key(&self) -> String {
         match self {
             CacheKey::AletheiaArticle(id) => format!("aletheia:article:{}", id),
             CacheKey::AletheiaSearch(query) => {

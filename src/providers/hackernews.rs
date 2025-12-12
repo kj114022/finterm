@@ -46,7 +46,7 @@ impl HnCategory {
         }
     }
 
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "new" => HnCategory::New,
             "best" => HnCategory::Best,
@@ -96,9 +96,7 @@ impl HackerNewsProvider {
 
         Ok(Self {
             client,
-            category: category
-                .map(|c| HnCategory::from_str(&c))
-                .unwrap_or_default(),
+            category: category.map(|c| HnCategory::parse(&c)).unwrap_or_default(),
             enabled: true,
             cached_ids: std::sync::Mutex::new(Vec::new()),
         })
@@ -360,14 +358,12 @@ impl FeedProvider for HackerNewsProvider {
 
             let results = join_all(futures).await;
 
-            for result in results {
-                if let Ok(item) = result {
-                    // Skip deleted/dead items
-                    if item.deleted.unwrap_or(false) || item.dead.unwrap_or(false) {
-                        continue;
-                    }
-                    all_items.push(self.convert_to_feed_item(item));
+            for item in results.into_iter().flatten() {
+                // Skip deleted/dead items
+                if item.deleted.unwrap_or(false) || item.dead.unwrap_or(false) {
+                    continue;
                 }
+                all_items.push(self.convert_to_feed_item(item));
             }
         }
 
@@ -472,9 +468,9 @@ mod tests {
 
     #[test]
     fn test_category_parsing() {
-        assert!(matches!(HnCategory::from_str("top"), HnCategory::Top));
-        assert!(matches!(HnCategory::from_str("show"), HnCategory::Show));
-        assert!(matches!(HnCategory::from_str("unknown"), HnCategory::Top));
+        assert!(matches!(HnCategory::parse("top"), HnCategory::Top));
+        assert!(matches!(HnCategory::parse("show"), HnCategory::Show));
+        assert!(matches!(HnCategory::parse("unknown"), HnCategory::Top));
     }
 
     #[tokio::test]

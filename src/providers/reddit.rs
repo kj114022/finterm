@@ -43,7 +43,7 @@ impl RedditSort {
         }
     }
 
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "new" => RedditSort::New,
             "top" => RedditSort::Top,
@@ -96,7 +96,7 @@ impl RedditProvider {
         Ok(Self {
             client,
             subreddits: default_subreddits,
-            sort: sort.map(|s| RedditSort::from_str(&s)).unwrap_or_default(),
+            sort: sort.map(|s| RedditSort::parse(&s)).unwrap_or_default(),
             enabled,
             current_subreddit_index: 0,
         })
@@ -503,11 +503,11 @@ mod tests {
 
     #[test]
     fn test_sort_from_str() {
-        assert!(matches!(RedditSort::from_str("hot"), RedditSort::Hot));
-        assert!(matches!(RedditSort::from_str("new"), RedditSort::New));
-        assert!(matches!(RedditSort::from_str("top"), RedditSort::Top));
-        assert!(matches!(RedditSort::from_str("rising"), RedditSort::Rising));
-        assert!(matches!(RedditSort::from_str("unknown"), RedditSort::Hot));
+        assert!(matches!(RedditSort::parse("hot"), RedditSort::Hot));
+        assert!(matches!(RedditSort::parse("new"), RedditSort::New));
+        assert!(matches!(RedditSort::parse("top"), RedditSort::Top));
+        assert!(matches!(RedditSort::parse("rising"), RedditSort::Rising));
+        assert!(matches!(RedditSort::parse("unknown"), RedditSort::Hot));
     }
 
     #[test]

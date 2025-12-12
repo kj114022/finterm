@@ -22,36 +22,35 @@ pub async fn fetch_link_preview(client: &Client, url: &str) -> Option<LinkPrevie
 
 /// Parse Open Graph metadata from HTML
 fn parse_open_graph(html: &str) -> Option<LinkPreview> {
-    let mut preview = LinkPreview::default();
-
-    // Extract og:title
-    preview.title =
+    let title =
         extract_meta_content(html, "og:title").or_else(|| extract_tag_content(html, "title"));
-
-    // Extract og:description
-    preview.description = extract_meta_content(html, "og:description")
+    let description = extract_meta_content(html, "og:description")
         .or_else(|| extract_meta_content(html, "description"));
-
-    // Extract og:image
-    preview.image_url = extract_meta_content(html, "og:image");
-
-    // Extract og:site_name
-    preview.site_name = extract_meta_content(html, "og:site_name");
-
-    // Extract og:type
-    preview.content_type = extract_meta_content(html, "og:type");
+    let image_url = extract_meta_content(html, "og:image");
+    let site_name = extract_meta_content(html, "og:site_name");
+    let content_type = extract_meta_content(html, "og:type");
 
     // Estimate reading time from content length
     let word_count = html.split_whitespace().count();
-    if word_count > 100 {
-        preview.reading_time = Some((word_count / 200).max(1) as u32);
-    }
+    let reading_time = if word_count > 100 {
+        Some((word_count / 200).max(1) as u32)
+    } else {
+        None
+    };
 
-    // Extract content snippet from first paragraph
-    preview.content_snippet = extract_first_paragraph(html);
+    let content_snippet = extract_first_paragraph(html);
 
-    if preview.title.is_some() || preview.description.is_some() {
-        Some(preview)
+    if title.is_some() || description.is_some() {
+        Some(LinkPreview {
+            title,
+            description,
+            image_url,
+            site_name,
+            content_type,
+            reading_time,
+            content_snippet,
+            favicon_url: None,
+        })
     } else {
         None
     }

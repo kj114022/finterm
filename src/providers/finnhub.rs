@@ -42,7 +42,7 @@ impl NewsCategory {
         }
     }
 
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "forex" => NewsCategory::Forex,
             "crypto" => NewsCategory::Crypto,
@@ -73,7 +73,7 @@ impl FinnhubProvider {
             api_key,
             base_url: "https://finnhub.io/api/v1".to_string(),
             category: category
-                .map(|c| NewsCategory::from_str(&c))
+                .map(|c| NewsCategory::parse(&c))
                 .unwrap_or_default(),
         })
     }
@@ -211,15 +211,15 @@ mod tests {
     #[test]
     fn test_category_parsing() {
         assert!(matches!(
-            NewsCategory::from_str("general"),
+            NewsCategory::parse("general"),
             NewsCategory::General
         ));
         assert!(matches!(
-            NewsCategory::from_str("crypto"),
+            NewsCategory::parse("crypto"),
             NewsCategory::Crypto
         ));
         assert!(matches!(
-            NewsCategory::from_str("unknown"),
+            NewsCategory::parse("unknown"),
             NewsCategory::General
         ));
     }
