@@ -10,22 +10,56 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
+  # Smart CI: Format, lint, test in one job (faster)
+  check:
+    name: Check & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Build
-        run: cargo build --verbose
-      - name: Run tests
-        run: cargo test --verbose
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      
+      - name: Check formatting
+        run: cargo fmt --all --check
+      
       - name: Clippy
         run: cargo clippy -- -D warnings
+      
+      - name: Build
+        run: cargo build --release
+      
+      - name: Test
+        run: cargo test
 
-  fmt:
+  # Auto-fix job: If format fails, fix it automatically
+  auto-fix:
+    name: Auto-Fix (Format)
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && failure()
+    needs: check
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
       - uses: dtolnay/rust-toolchain@stable
-      - name: Check formatting
-        run: cargo fmt --check
+        with:
+          components: rustfmt
+      
+      - name: Format code
+        run: cargo fmt --all
+      
+      - name: Commit fixes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: Auto-format with cargo fmt"
+          branch: ${{ github.ref_name }}
