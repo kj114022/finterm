@@ -205,7 +205,7 @@ impl ArxivProvider {
         let arxiv_id = entry
             .link
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("unknown")
             .to_string();
 

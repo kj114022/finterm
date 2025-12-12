@@ -131,7 +131,7 @@ impl Comment {
 }
 
 /// Rich link preview data (Open Graph / meta tags)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct LinkPreview {
     /// Page title (og:title)
     pub title: Option<String>,
@@ -149,21 +149,6 @@ pub struct LinkPreview {
     pub content_type: Option<String>,
     /// Reading time estimate in minutes
     pub reading_time: Option<u32>,
-}
-
-impl Default for LinkPreview {
-    fn default() -> Self {
-        Self {
-            title: None,
-            description: None,
-            image_url: None,
-            site_name: None,
-            content_snippet: None,
-            favicon_url: None,
-            content_type: None,
-            reading_time: None,
-        }
-    }
 }
 
 /// Sentiment analysis result

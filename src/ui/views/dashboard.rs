@@ -156,7 +156,7 @@ fn render_feed_item(
     }
 
     // Second line: metadata
-    let meta_prefix = if is_selected { "  " } else { "  " };
+    let meta_prefix = "  ";
     let mut line2_spans = vec![
         Span::raw(meta_prefix),
         Span::styled(item.source.clone(), Theme::style_muted()),
